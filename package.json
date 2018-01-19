@@ -1,0 +1,22 @@
+{
+  "name": "pancake",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "testserver": "node dist/Syrup/testserver.js",
+    "testserver-i": "node --inspect-brk dist/Syrup/testserver.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/lodash": "^4.14.93",
+    "@types/node": "^9.3.0",
+    "@types/restify": "^5.0.7",
+    "restify": "^6.3.4"
+  },
+  "devDependencies": {
+    "eslint": "^4.15.0"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "global": {
+    "JWT_SECRET": "sjkhdsafk327678324687bjkbbb&^*&^bbdsdkbkdkb",
+    "LOG_LEVEL": "trace"
+  },
+  "test": {
+    "PORT": 3000
+  },
+  "development": {
+    "PORT": 3000
+  }
+}
