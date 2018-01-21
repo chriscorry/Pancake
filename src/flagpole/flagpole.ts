@@ -148,12 +148,12 @@ export class Flagpole
 
     // Add to the main API collection
     this._registeredAPIsByToken.set(apiToken, newAPI);
-    log.trace(`FP: New API "${apiToken}" registered.`);
+    log.info(`FP: New API "${apiToken}" registered.`);
 
     // Let the API know
-    if (newAPI.apiHandler.initialize) {
+    if (newAPI.apiHandler.initializeAPI) {
       log.trace(`FP: Calling API initializer`);
-      newAPI.apiHandler.initialize(this._serverRestify, config, name, ver, apiToken);
+      newAPI.apiHandler.initializeAPI(this._serverRestify, config, name, ver, apiToken);
     }
   }
 
