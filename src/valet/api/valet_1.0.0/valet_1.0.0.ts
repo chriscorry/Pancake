@@ -52,7 +52,7 @@ let IdentityFactory = {
  ****************************************************************************/
 
 
-export function initialize(serverRestify: any, config?: Configuration) : void
+export function initializeAPI(serverRestify: any, config?: Configuration) : void
 {
   let maintenanceInterval: number = config ? config.get('MAINTENANCE_INTERVAL') : 60*5;
   let maxCacheSize: number        = config ? config.get('MAX_CACHE_SIZE') : 100;
@@ -69,7 +69,7 @@ export function initialize(serverRestify: any, config?: Configuration) : void
 
 async function getItem(req: any, res: any, next: Function) : Promise<any>
 {
-  let item, status, result;
+  let item: any, status: number, result: any;
   [result, item] = await grab(cache.get(req.body.id, req.body.className, req.body.opts));
 
   // Process the results
@@ -84,7 +84,7 @@ async function getItem(req: any, res: any, next: Function) : Promise<any>
 
 async function getItemMultiple(req: any, res: any, next: Function) : Promise<any>
 {
-  let items, status, result;
+  let items: any, status: number, result: any;
   [result, items] = await grab(cache.getMultiple(req.body.idInfos));
 
   // Process the results
@@ -99,7 +99,7 @@ async function getItemMultiple(req: any, res: any, next: Function) : Promise<any
 
 async function setItem(req: any, res: any, next: Function) : Promise<any>
 {
-  let item, status, result;
+  let item: any, status: number, result: any;
   [result, item] = await grab(cache.set(req.body.id, req.body.obj, req.body.className, req.body.opts));
 
   // Process the results
@@ -114,7 +114,7 @@ async function setItem(req: any, res: any, next: Function) : Promise<any>
 
 async function loadItems(req: any, res: any, next: Function) : Promise<any>
 {
-  let items, status, result;
+  let items: any, status: number, result: any;
   [result, items] = await grab(cache.load(req.body.query, req.body.className, req.body.opts));
 
   // Process the results
@@ -144,25 +144,24 @@ function dumpCache(req: any, res: any, next: Function) : Promise<any>
 
 async function load10(req: any, res: any, next: Function) : Promise<any>
 {
-  let items: any[];
+  let items: any[] = [];
+  let status: number, result: any;
   for (let iter = 0; iter < 10; iter++) {
     items.push({
       id: getRandomInt(9999999)+10000000,
       className: 'Identity'
     });
   }
-  try {
-    items = await cache.getMultiple(items);
-    if (!items) {
-      res.send(400, cache.getLastError());
-    }
-    else {
-      res.send(200, { items });
-    }
+
+  // Make it happen
+  [result, items] = await grab(cache.getMultiple(items));
+
+  // Process the results
+  status = (result || !items) ? 400 : 200;
+  if (!result) {
+    result = items ? { numItems: items.length, items } : cache.getLastError();
   }
-  catch (err) {
-    res.send(400, err);
-  }
+  res.send(status, result);
   return next();
 }
 

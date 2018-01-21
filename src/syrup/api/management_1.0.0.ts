@@ -4,9 +4,11 @@
  **                                                                        **
  ****************************************************************************/
 
-import _           = require('lodash');
-const { log }      = require('../../util/pancake-utils');
-const { flagpole } = require('../../flagpole/flagpole');
+import _ = require('lodash');
+import * as util    from '../../util/pancake-utils';
+import { grab }     from '../../util/pancake-grab';
+import { flagpole } from '../../flagpole/flagpole';
+const log = util.log;
 
 
 /****************************************************************************
@@ -15,9 +17,14 @@ const { flagpole } = require('../../flagpole/flagpole');
  **                                                                        **
  ****************************************************************************/
 
+const DEFAULT_SHUTDOWN_TIMER = 5; // 5 seconds
+
+let _server: any;
 let _nameThisAPI: string;
 let _verThisAPI: string;
 let _serverStart: number;
+let _shutdownCountdown: number = 0;
+let _timerID: NodeJS.Timer;
 
 
 /****************************************************************************
@@ -26,28 +33,72 @@ let _serverStart: number;
  **                                                                        **
  ****************************************************************************/
 
-export function initialize(serverRestify: any,
-                           name: string,
-                           ver: string,
-                           apiToken:string) : void
+function _shutdownServer() : void
 {
-  _nameThisAPI = name;
-  _verThisAPI  = ver;
-  _serverStart = Date.now();
+  if (_shutdownCountdown > 0) {
+    _shutdownCountdown--;
+
+    if (_shutdownCountdown === 0) {
+      // Do it!
+      log.warn('MGMT: Server shutting down now.');
+      _server.close();
+      process.exit(0);
+    }
+    else {
+      log.warn(`MGMT: Server shutting down in ${_shutdownCountdown} seconds.`);
+      _timerID = setTimeout(_shutdownServer, _shutdownCountdown*1000);
+    }
+  }
 }
 
 
-function _getTimeComponents(ms: number) : { days: number, hours: number, minutes: number, seconds: number}
+export function initializeAPI(server: any,
+                              name: string,
+                              ver: string,
+                              apiToken:string) : void
 {
-  let x: number = ms / 1000;
-  let seconds: number = Math.round(x % 60);
-  x /= 60;
-  let minutes: number = Math.floor(x % 60);
-  x /= 60;
-  let hours: number = Math.floor(x % 24);
-  x /= 24;
-  let days: number = Math.floor(x);
-  return { days, hours, minutes, seconds };
+  _server            = server;
+  _nameThisAPI       = name;
+  _verThisAPI        = ver;
+  _serverStart       = Date.now();
+  _shutdownCountdown = 0;
+}
+
+
+function _shutdown(req: any, res: any, next: Function)
+{
+  _shutdownCountdown = (req.body && req.body.countdown) ? req.body.countdown : DEFAULT_SHUTDOWN_TIMER;
+
+  // Kick off our timer
+  if (_timerID) {
+    clearTimeout(_timerID);
+  }
+  _timerID = setTimeout(_shutdownServer, 1000);
+
+  // Let folks know
+  let message = `Server shutting down in ${_shutdownCountdown} seconds.`;
+  log.warn('MGMT: ' + message);
+
+  res.send(200, { alert: message });
+  return next();
+}
+
+
+function _cancelShutdown(req: any, res: any, next: Function)
+{
+  let message: string;
+  if (_shutdownCountdown > 0)
+  {
+    clearTimeout(_timerID);
+    _shutdownCountdown = 0;
+    message = 'Server shutdown canceled.';
+    log.warn('MGMT: ' + message);
+  }
+  else {
+    message = 'Server not shutting down. Nothing to cancel.';
+  }
+  res.send(200, { alert: message });
+  return next();
 }
 
 
@@ -166,7 +217,7 @@ function _getAPIs(req: any, res: any, next: Function)
 function _getStats(req: any, res: any, next: Function)
 {
   res.send(200, {
-    uptime: _getTimeComponents(Date.now() - _serverStart)
+    uptime: util.getTimeComponents(Date.now() - _serverStart)
   });
   return next();
 }
@@ -179,4 +230,6 @@ export let flagpoleHandlers = [
   { requestType: 'get',   path: '/management/apis',            handler: _getAPIs },
   { requestType: 'del',   path: '/management/unregisterapi',   handler: _unregisterAPI },
   { requestType: 'get',   path: '/management/stats',           handler: _getStats },
+  { requestType: 'post',  path: '/management/shutdown',        handler: _shutdown },
+  { requestType: 'get',   path: '/management/cancelshutdown',  handler: _cancelShutdown }
 ];
