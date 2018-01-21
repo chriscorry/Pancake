@@ -1,8 +1,8 @@
 node_modules/
 backup/
 dist/
-src/.DS_Store
 .DS_Store
+*.map
 flagpole.bat
 syrup.bat
 valet.bat
