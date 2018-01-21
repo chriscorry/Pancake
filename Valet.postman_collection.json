@@ -1,0 +1,182 @@
+{
+	"info": {
+		"name": "Valet",
+		"_postman_id": "037e5f51-1df3-8139-0cbd-7c4f23b55808",
+		"description": "",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "getStats (GET /cache/stats) - return cache stats",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"url": {
+					"raw": "{{url}}/cache/stats",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"cache",
+						"stats"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "getItem (POST /cache/item) - retrieve item",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"id\": \"5a5f2b6695605c56e1992138\",\n\t\"className\": \"User\"\n}"
+				},
+				"url": {
+					"raw": "{{url}}/cache/item",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"cache",
+						"item"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "getItems (POST /cache/items) - retrieve multiple items",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"idInfos\": [\n\t\t{\n\t\t\t\"id\": 837483456,\n\t\t\t\"className\": \"Identity\"\n\t\t},\n\t\t{\n\t\t\t\"id\": 123456789,\n\t\t\t\"className\": \"Identity\"\n\t\t},\n\t\t{\n\t\t\t\"id\": 1111111111,\n\t\t\t\"className\": \"Identity\"\n\t\t},\n\t\t{\n\t\t\t\"id\": 923895742,\n\t\t\t\"className\": \"Identity\"\n\t\t},\n\t\t{\n\t\t\t\"id\": 123456789,\n\t\t\t\"className\": \"Identity\"\n\t\t}\n\t]\n}"
+				},
+				"url": {
+					"raw": "{{url}}/cache/items",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"cache",
+						"items"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "setItem (POST /cache/setitem) - insert item into cache",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"obj\": {\n\t\t\"phoneNumber\": \"818.263.6165\",\n\t\t\"email\": \"chris@thecorrys.com\"\n\t},\n\t\"className\": \"User\",\n\t\"opts\": {\n\t\t\"isDirty\": true\n\t}\n}\n"
+				},
+				"url": {
+					"raw": "{{url}}/cache/set",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"cache",
+						"set"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "dumpCache (GET /cache/dump) - log cache contents",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"url": {
+					"raw": "{{url}}/cache/dump",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"cache",
+						"dump"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "load10 (GET /cache/load10) - load 10 items into cache",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"url": {
+					"raw": "{{url}}/cache/load10",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"cache",
+						"load10"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "loadItems (POST /cache/load) -load items into cache using query",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"query\": {\n\t\t\"email\": \"chris@thecorrys.com\"\t\n\t},\n\t\"className\": \"User\"\n}\n"
+				},
+				"url": {
+					"raw": "{{url}}/cache/load",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"cache",
+						"load"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		}
+	]
+}

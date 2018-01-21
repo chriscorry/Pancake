@@ -189,7 +189,7 @@ class Logger
 }
 
 
-// THE log instance
+// THE log singleton
 export let log: Logger;
 if (!log) {
   log = new Logger();

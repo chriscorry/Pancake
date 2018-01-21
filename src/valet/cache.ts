@@ -4,9 +4,11 @@
  **                                                                        **
  ****************************************************************************/
 
-import now             = require('performance-now');
-const { log }          = require('../../Util/pancake-utils');
-const { PancakeError } = require('../../Util/pancake-err');
+import now              = require('performance-now');
+import { PancakeError }  from '../util/pancake-err';
+import { Configuration } from '../util/pancake-config';
+import utils             = require('../util/pancake-utils');
+const  log               = utils.log;
 
 
 /****************************************************************************
@@ -15,27 +17,64 @@ const { PancakeError } = require('../../Util/pancake-err');
  **                                                                        **
  ****************************************************************************/
 
+export interface CacheOpts {
+  maintenanceInterval?: number,
+  maxCacheSize?: number
+}
+
+export interface ClassFactory {
+
+  // Must have
+  createId(obj?: any) : string;
+  saveItem(id: string, obj: any, className: string, opts?: any) : any;
+  loadItem(id: string, className: string, opts?: any) : any;
+
+  // Optional
+  initialize(className: string, ttl: number, config?: Configuration) : void;
+  terminate() : void;
+  loadItems(query: any, className: string, opts?: any) : any[];
+}
+
+export interface IdInfo {
+  id?: string,
+  className?: string,
+  ttl?: number,
+  opts?: any
+}
+
+interface _FactoryInfo {
+  factory?: ClassFactory,
+  ttl?: number,
+  config?: Configuration
+}
+
+interface _CacheItem {
+  value?: any,
+  expire?: number
+}
+
+
 const MAINTENANCE_INTERVAL = 60*5; // Every five minutes
 const MAX_CACHE_SIZE       = 100000;
-const DEFAULT_TTL          = 60*5;
+export const DEFAULT_TTL   = 60*5;
 
-var _factories           = new Map();
-var _cache               = new Map();
-var _maintenanceInterval = MAINTENANCE_INTERVAL * 1000;
-var _maxCacheSize        = MAX_CACHE_SIZE;
-var _timerID             = 0;
-var _initialized         = false;
-var _lastError;
+let _factories           = new Map();
+let _cache               = new Map();
+let _maintenanceInterval = MAINTENANCE_INTERVAL * 1000;
+let _maxCacheSize        = MAX_CACHE_SIZE;
+let _initialized         = false;
+let _timerID: NodeJS.Timer;
+let _lastError: any;
 
 // Stats
-var _cacheRequests  = 0;
-var _cacheHits      = 0;
-var _cacheMisses    = 0;
-var _cacheFlushes   = 0;
-var _cacheExpires   = 0;
-var _cacheLoads     = 0;
-var _cacheInjects   = 0;
-var _aveRequestTime = 0.0;
+let _cacheRequests  = 0;
+let _cacheHits      = 0;
+let _cacheMisses    = 0;
+let _cacheFlushes   = 0;
+let _cacheExpires   = 0;
+let _cacheLoads     = 0;
+let _cacheInjects   = 0;
+let _aveRequestTime = 0.0;
 
 
 /****************************************************************************
@@ -45,7 +84,10 @@ var _aveRequestTime = 0.0;
  ****************************************************************************/
 
 
-function registerFactory(className, factory, ttl = DEFAULT_TTL, config)
+export function registerFactory(className: string,
+                                factory: ClassFactory,
+                                ttl: number = DEFAULT_TTL,
+                                config?: Configuration) : any
 {
   // Quick and dirty validation
   if (!className || !factory) {
@@ -75,9 +117,9 @@ function registerFactory(className, factory, ttl = DEFAULT_TTL, config)
   return factory;
 }
 
-function unregisterFactory(className)
+export function unregisterFactory(className: string) : void
 {
-  var factoryInfo = _factories.get(className);
+  let factoryInfo = _factories.get(className);
   if (factoryInfo) {
     if (factoryInfo.factory.terminate) {
       factoryInfo.factory.terminate();
@@ -86,29 +128,23 @@ function unregisterFactory(className)
   }
 }
 
-function getFactory(className)
+export function getFactory(className: string) : ClassFactory
 {
-  var factoryInfo = _factories.get(className);
+  let factoryInfo = _factories.get(className);
   if (!factoryInfo) {
     factoryInfo = _factories.get('*');
   }
   return factoryInfo ? factoryInfo.factory : undefined;
 }
 
-function getClassNames()
+export function getClassNames() : string[]
 {
-  var classNames = [];
+  let classNames: string[] = [];
   _factories.forEach((value, key) => {
     classNames.push(key);
   });
   return classNames;
 }
-
-module.exports.DEFAULT_TTL       = DEFAULT_TTL;
-module.exports.registerFactory   = registerFactory;
-module.exports.unregisterFactory = unregisterFactory;
-module.exports.getFactory        = getFactory;
-module.exports.getClassNames     = getClassNames;
 
 
 /****************************************************************************
@@ -121,7 +157,7 @@ module.exports.getClassNames     = getClassNames;
 // PRIVATE
 //
 
-function _processError(status, reason, obj)
+function _processError(status: string, reason?: string, obj?: any) : PancakeError
 {
   _lastError = new PancakeError(status, reason, obj);
   log.trace(`CACHE: ${status}: ${reason}`);
@@ -129,7 +165,7 @@ function _processError(status, reason, obj)
   return _lastError;
 }
 
-function _getFactoryInfo(className)
+function _getFactoryInfo(className: string) : _FactoryInfo
 {
   var factoryInfo = _factories.get(className);
   if (!factoryInfo) {
@@ -139,21 +175,20 @@ function _getFactoryInfo(className)
 }
 
 
-function _updateAveRequestTime(newValue)
+function _updateAveRequestTime(newValue: number) : void
 {
   _aveRequestTime = (_aveRequestTime * (_cacheRequests-1) + newValue) / _cacheRequests;
   if (_aveRequestTime < 0.0) {
-    log.error(`_aveRequestTime just went negative! ${_aveRequestTime}`);
-    process.exit(1);
+    log.warn(`_aveRequestTime just went negative! ${_aveRequestTime}`);
   }
 }
 
 
-function _cacheMaintenance()
+function _cacheMaintenance() : void
 {
-  var expired = [], idArray = [];
-  var expiredItemCount = 0, flushedItemCount = 0;
-  var perfStart = now();
+  let expired: string[] = [];
+  let expiredItemCount = 0, flushedItemCount = 0;
+  let perfStart = now();
 
   log.info(`CACHE: Beginning maintenance (interval = ${_maintenanceInterval/1000} sec)...`);
 
@@ -164,11 +199,11 @@ function _cacheMaintenance()
   // (Could use filterMap instead of multiple pass through cache, but
   // this implementation trades speed for lower memory footprint -- doesn't
   // dup entire cache Map()!)
-  var currTime = Date.now();
-  _cache.forEach((value, key) => value.expire < currTime ? expired.push(key) : undefined);
+  let currTime = Date.now();
+  _cache.forEach((cacheItem: _CacheItem, id: string) => cacheItem.expire < currTime ? expired.push(id) : undefined);
 
   // Remove them from the cache
-  expired.forEach((currID) => {
+  expired.forEach((currID: string) => {
     _cache.delete(currID);
     _cacheExpires++;
     expiredItemCount++;
@@ -181,9 +216,10 @@ function _cacheMaintenance()
     log.trace(`CACHE:    Cache too large (curr = ${_cache.size}, max = ${_maxCacheSize}). Reducing...`);
 
     // Build the expires datastructures
-    var expiresInfos = new Map();
-    var expires      = [];
-    _cache.forEach((cacheItem, currID) => {
+    let expiresInfos      = new Map<number, string[]>();
+    let expires: number[] = [];
+    let idArray: string[];
+    _cache.forEach((cacheItem: _CacheItem, currID: string) => {
       idArray = expiresInfos.get(cacheItem.expire);
       if (idArray) {
         idArray.push(currID);
@@ -199,10 +235,10 @@ function _cacheMaintenance()
     expires.sort();
 
     // Start clearing items out, starting with items with soonest expiration
-    var iter = 0;
+    let iter = 0;
     while (_cache.size > _maxCacheSize) {
       idArray = expiresInfos.get(expires[iter]);
-      idArray.forEach((currID) => {
+      idArray.forEach((currID: string) => {
         _cache.delete(currID);
         _cacheFlushes++;
         flushedItemCount++;
@@ -219,9 +255,9 @@ function _cacheMaintenance()
 }
 
 
-function _lookupItem(id)
+function _lookupItem(id: string) : any
 {
-  var cacheItem = _cache.get(id);
+  let cacheItem: _CacheItem = _cache.get(id);
   if (cacheItem) {
 
     // Has the item expired?
@@ -238,7 +274,7 @@ function _lookupItem(id)
 // PUBLIC
 //
 
-function initialize(opts)
+export function initialize(opts?: CacheOpts) : void
 {
   if (opts) {
     if (opts.maintenanceInterval) _maintenanceInterval = opts.maintenanceInterval*1000;
@@ -247,32 +283,31 @@ function initialize(opts)
   _initialized = true;
 
   // Kick off timer
-  if (_timerID != 0) {
+  if (_timerID) {
     clearTimeout(_timerID);
   }
   _timerID = setTimeout(_cacheMaintenance, _maintenanceInterval);
 }
 
 
-async function get(userId, className, opts)
+export async function get(id: string, className: string, opts?: any) : Promise<any>
 {
   // Quick and dirty validation
   if (_initialized == false) {
     return Promise.reject(_processError('ERR_CACHE_NOT_INIT', `CACHE: Cannot use cache before initialization.`));
   }
-  if (!userId || !className)
+  if (!id || !className)
   {
     _processError('ERR_BAD_ARG', `CACHE: Could not retrieve item.`);
     return;
   }
 
   // We only use string keys in the cache
-  let id = (typeof userId === 'string') ? userId : userId.toString();
   let perfStart = now();
 
   // Easy case -- we have it..
   _cacheRequests++;
-  var obj = _lookupItem(id);
+  let obj = _lookupItem(id);
   if (obj) {
     _cacheHits++;
     _updateAveRequestTime(now()-perfStart);
@@ -281,10 +316,10 @@ async function get(userId, className, opts)
   _cacheMisses++;
 
   // Load the item
-  var factoryInfo = _getFactoryInfo(className);
+  let factoryInfo = _getFactoryInfo(className);
   if (factoryInfo) {
     try {
-      var newObj = await factoryInfo.factory.loadItem(id, className, opts);
+      let newObj = await factoryInfo.factory.loadItem(id, className, opts);
       if (newObj) {
         _cache.set(id, { value: newObj, expire: Date.now()+factoryInfo.ttl });
         _cacheLoads++;
@@ -302,7 +337,7 @@ async function get(userId, className, opts)
 }
 
 
-async function getMultiple(idInfos)
+export async function getMultiple(idInfos: IdInfo[])
 {
   // Quick and dirty validation
   if (!_initialized) {
@@ -314,11 +349,15 @@ async function getMultiple(idInfos)
     return;
   }
 
-  var iter, newObj, idInfo, factoryInfo, id, requestHits = 0;
-  var perfStart  = now();
-  var objsNew    = [];
-  var objsReturn = [];
-  var promises   = [];
+  let iter: number             = 0;
+  let requestHits: number      = 0;
+  let perfStart                = now();
+  let objsNew: any[]           = [];
+  let objsReturn: any[]        = [];
+  let promises: Promise<any>[] = [];
+  let newObj: any;
+  let idInfo: IdInfo;
+  let factoryInfo: _FactoryInfo;
 
   if (idInfos.length) {
 
@@ -329,8 +368,7 @@ async function getMultiple(idInfos)
 
         // Phase 1: Get our cache hits out of the way...
         _cacheRequests++;
-        id = (typeof idInfo.id === 'string') ? idInfo.id : idInfo.id.toString();
-        newObj = _lookupItem(id);
+        newObj = _lookupItem(idInfo.id);
         if (newObj) {
           _cacheHits++;
           requestHits++;
@@ -344,7 +382,7 @@ async function getMultiple(idInfos)
           factoryInfo = _getFactoryInfo(idInfo.className);
           if (factoryInfo) {
             idInfo.ttl = factoryInfo.ttl; // Save off the ttl, we'll need it later
-            promises[iter] = factoryInfo.factory.loadItem(id, idInfo.className, idInfo.opts);
+            promises[iter] = factoryInfo.factory.loadItem(idInfo.id, idInfo.className, idInfo.opts);
           }
           else {
             // We're doomed at this point
@@ -366,8 +404,7 @@ async function getMultiple(idInfos)
         newObj = objsNew[iter];
         if (newObj) {
           idInfo = idInfos[iter];
-          id = (typeof idInfo.id === 'string') ? idInfo.id : idInfo.id.toString();
-          _cache.set(id, { value: newObj, expire: Date.now()+idInfo.ttl });
+          _cache.set(idInfo.id, { value: newObj, expire: Date.now()+idInfo.ttl });
           _cacheLoads++;
           objsReturn[iter] = newObj;
         }
@@ -391,7 +428,7 @@ async function getMultiple(idInfos)
 }
 
 
-async function set(userId, obj, className, opts)
+export async function set(id: string, obj: any, className: string, opts?: any) : Promise<[string, any]>
 {
   // Quick and dirty validation
   if (!_initialized) {
@@ -403,14 +440,8 @@ async function set(userId, obj, className, opts)
     return;
   }
 
-  // Massage our id, if provided
-  var id;
-  if (userId) {
-    id = (typeof userId === 'string') ? userId : userId.toString();
-  }
-
-  var cacheItem = {};
-  var factoryInfo = _getFactoryInfo(className);
+  let cacheItem: _CacheItem = {};
+  let factoryInfo = _getFactoryInfo(className);
   if (factoryInfo) {
 
     // Do we need to generate a new ID?
@@ -419,11 +450,10 @@ async function set(userId, obj, className, opts)
       if (!id) {
         return Promise.reject(_processError('ERR_NO_ID', `CACHE: Cannot add item to cache without id.`));
       }
-      id = (typeof userId === id) ? id : id.toString();
     }
 
     // Place in the cache
-    var ttl = factoryInfo.ttl;
+    let ttl = factoryInfo.ttl;
     if (opts && opts.ttl) {
       ttl = opts.ttl;
     }
@@ -449,7 +479,7 @@ async function set(userId, obj, className, opts)
 }
 
 
-async function load(query, className, opts)
+export async function load(query: any, className: string, opts?: any) : Promise<any[]>
 {
   // Quick and dirty validation
   if (!_initialized) {
@@ -461,8 +491,8 @@ async function load(query, className, opts)
     return;
   }
 
-  var newObjs = [];
-  var factoryInfo = _getFactoryInfo(className);
+  let newObjs: any[] = [];
+  let factoryInfo = _getFactoryInfo(className);
   if (factoryInfo) {
 
     // Supports queries?
@@ -473,7 +503,7 @@ async function load(query, className, opts)
     try {
       newObjs = await factoryInfo.factory.loadItems(query, className, opts);
       if (newObjs) {
-        newObjs.forEach((newObj) => {
+        newObjs.forEach((newObj: any) => {
           let id = (typeof newObj._id === 'string') ? newObj._id : newObj._id.toString();
           _cache.set(id, { value: newObj, expire: Date.now()+factoryInfo.ttl });
           _cacheLoads++;
@@ -491,7 +521,7 @@ async function load(query, className, opts)
 }
 
 
-function getStats()
+export function getStats() : any
 {
   return {
     cacheRequests:   _cacheRequests,
@@ -510,7 +540,7 @@ function getStats()
 }
 
 
-function resetStats()
+export function resetStats() : void
 {
   _cacheRequests   = 0;
   _cacheHits       = 0;
@@ -523,31 +553,20 @@ function resetStats()
 }
 
 
-function dumpCache()
+export function dumpCache() : void
 {
   log.info('===== DUMP CACHE START =======================================');
   log.info(`Cache size: ${_cache.size}`);
-  _cache.forEach((value, key) => {
-    log.info(`   Cache Item ${key}`);
-    log.info(`          expire: ${value.expire}`);
-    log.info(`          value:  ${JSON.stringify(value.value)}`);
+  _cache.forEach((cacheItem: _CacheItem, id: string) => {
+    log.info(`   Cache Item '${id}'`);
+    log.info(`          expire: ${cacheItem.expire}`);
+    log.info(`          value:  ${JSON.stringify(cacheItem.value)}`);
   });
   log.info('===== DUMP CACHE END =========================================');
 }
 
 
-function getLastError()
+export function getLastError() : PancakeError
 {
   return _lastError;
 }
-
-
-module.exports.initialize   = initialize;
-module.exports.get          = get;
-module.exports.getMultiple  = getMultiple;
-module.exports.set          = set;
-module.exports.load         = load;
-module.exports.getStats     = getStats;
-module.exports.dumpCache    = dumpCache;
-module.exports.resetStats   = resetStats;
-module.exports.getLastError = getLastError;

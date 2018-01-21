@@ -9,7 +9,7 @@ import restify          = require('restify');
 
 const { log }           = require('../util/pancake-utils');
 const { Configuration } = require('../util/pancake-config');
-const flagpole          = require('../flagpole/flagpole');
+const { flagpole }      = require('../flagpole/flagpole');
 
 
 /****************************************************************************
@@ -17,6 +17,9 @@ const flagpole          = require('../flagpole/flagpole');
  ** Vars & definitions                                                     **
  **                                                                        **
  ****************************************************************************/
+
+const DEFAULT_SERVER_CONFIG = 'serverconfig.json';
+const DEFAULT_API_CONFIG    = 'apiconfig.json';
 
 export interface SyrupOpts {
   name?:   string,
@@ -32,8 +35,8 @@ export interface SyrupOpts {
  ****************************************************************************/
 
 // This is all there is
-export function go(serverConfigFileName: string,
-                   apiConfigFileName?: string,
+export function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
+                   apiConfigFileName: string = DEFAULT_API_CONFIG,
                    opts?: SyrupOpts) : void
 {
   let syrupOpts         = opts || <SyrupOpts>{};
@@ -97,17 +100,10 @@ export function go(serverConfigFileName: string,
   }
 
   // Now load the main APIs
-  let configFile: string = apiConfigFileName || config.get['SYRUP_API_CONFIG_FILE';
-  if (configFile) {
-    log.info(`SYRUP: Loading user APIs...`);
-    err = flagpole.loadAPIConfig(apiConfigFileName || config.get['SYRUP_API_CONFIG_FILE']);
-    if (err) {
-      log.error(err);
-      log.error('Exiting...');
-      process.exit(err);
-    }
-  }
-  else {
+  let configFile: string = config.get['SYRUP_API_CONFIG_FILE'] || apiConfigFileName;
+  log.info(`SYRUP: Loading user APIs...`);
+  err = flagpole.loadAPIConfig(configFile);
+  if (err) {
     log.warn(`SYRUP: No user API loaded. (${configFile})`);
   }
 

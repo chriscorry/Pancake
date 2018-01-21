@@ -1,0 +1,204 @@
+{
+	"info": {
+		"name": "Syrup",
+		"_postman_id": "8b61dfa0-36ff-78d2-3677-6f4eb95ae44e",
+		"description": "",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "reloadAPIConfig (PATCH /management/reloadapis) - reload API config file",
+			"request": {
+				"method": "PATCH",
+				"header": [
+					{
+						"key": "accept-version",
+						"value": "1"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"fileName\": \"./config/apiconfig.json\"\n}"
+				},
+				"url": {
+					"raw": "{{url}}/management/reloadapis",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"management",
+						"reloadapis"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "getAPIs (GET /management/apis) - return list of registered APIs",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "accept-version",
+						"value": "1"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"disabled": true
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"fileName\": \".//apiconfig.json\"\n}"
+				},
+				"url": {
+					"raw": "{{url}}/management/apis",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"management",
+						"apis"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "unregisterAPI (DEL /management/unregister) - unregister an API",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "accept-version",
+						"value": "1"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"name\": \"test\",\n\t\"ver\": \"2.0.0\"\n}"
+				},
+				"url": {
+					"raw": "{{url}}/management/unregisterapi",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"management",
+						"unregisterapi"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "logBookmark (POST /management/logbookmark) - place demarcation into log",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "accept-version",
+						"value": "1"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"fileName\": \"./config/apiconfig.json\"\n}"
+				},
+				"url": {
+					"raw": "{{url}}/management/logbookmark",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"management",
+						"logbookmark"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "setLogLevel (POST /management/setloglevel) - set logging level",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "accept-version",
+						"value": "1"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"level\": \"trace\"\n}"
+				},
+				"url": {
+					"raw": "{{url}}/management/setloglevel",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"management",
+						"setloglevel"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "getStats (GET /management/stats) - return list of server stats",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "accept-version",
+						"value": "1"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"disabled": true
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n\t\"fileName\": \".//apiconfig.json\"\n}"
+				},
+				"url": {
+					"raw": "{{url}}/management/stats",
+					"host": [
+						"{{url}}"
+					],
+					"path": [
+						"management",
+						"stats"
+					]
+				},
+				"description": ""
+			},
+			"response": []
+		}
+	]
+}
