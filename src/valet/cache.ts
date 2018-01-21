@@ -175,12 +175,15 @@ function _getFactoryInfo(className: string) : _FactoryInfo
 }
 
 
-function _updateAveRequestTime(newValue: number) : void
+function _updateAveRequestTime(duration: number) : void
 {
-  _aveRequestTime = (_aveRequestTime * (_cacheRequests-1) + newValue) / _cacheRequests;
-  if (_aveRequestTime < 0.0) {
-    log.warn(`_aveRequestTime just went negative! ${_aveRequestTime}`);
-  }
+  _aveRequestTime = (_aveRequestTime * (_cacheRequests-1) + duration) / _cacheRequests;
+}
+
+
+function _updateAveRequestTimeFromStart(startTime: number) : void
+{
+  _updateAveRequestTime(now()-startTime);
 }
 
 
@@ -310,7 +313,7 @@ export async function get(id: string, className: string, opts?: any) : Promise<a
   let obj = _lookupItem(id);
   if (obj) {
     _cacheHits++;
-    _updateAveRequestTime(now()-perfStart);
+    _updateAveRequestTimeFromStart(perfStart);
     return obj;
   }
   _cacheMisses++;
@@ -323,8 +326,11 @@ export async function get(id: string, className: string, opts?: any) : Promise<a
       if (newObj) {
         _cache.set(id, { value: newObj, expire: Date.now()+factoryInfo.ttl });
         _cacheLoads++;
-        _updateAveRequestTime(perfStart-now());
+        _updateAveRequestTimeFromStart(perfStart);
         return newObj;
+      }
+      else {
+        return Promise.reject(_processError('ERR_OBJ_NOT_FOUND', `CACHE: Could not load object. ${id}, ${className}, ${opts}`));
       }
     }
     catch (err) {
@@ -392,7 +398,7 @@ export async function getMultiple(idInfos: IdInfo[])
       }
       if (requestHits === idInfos.length) {
         // All items were serviced from cache
-        _updateAveRequestTime(now()-perfStart);
+        _updateAveRequestTimeFromStart(perfStart);
         return objsReturn;
       }
 
@@ -418,7 +424,7 @@ export async function getMultiple(idInfos: IdInfo[])
       }
 
       // Yay!
-      _updateAveRequestTime(now()-perfStart);
+      _updateAveRequestTimeFromStart(perfStart);
       return objsReturn;
     }
     catch (err) {
