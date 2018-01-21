@@ -38,6 +38,27 @@ export function isNumeric(value: any) : boolean
 }
 
 
+export interface TimeComponents {
+  days: number,
+  hours: number,
+  minutes: number,
+  seconds: number
+}
+
+export function getTimeComponents(ms: number) : TimeComponents
+{
+  let x: number = ms / 1000;
+  let seconds: number = Math.round(x % 60);
+  x /= 60;
+  let minutes: number = Math.floor(x % 60);
+  x /= 60;
+  let hours: number = Math.floor(x % 24);
+  x /= 24;
+  let days: number = Math.floor(x);
+  return { days, hours, minutes, seconds };
+}
+
+
 /****************************************************************************
  **                                                                        **
  ** Logging                                                                **
