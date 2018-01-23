@@ -6,8 +6,9 @@
 
 const  cache                  = require('../../cache');
 const  { SimpleMongoFactory } = require('./SimpleMongoFactory');
-import { grab }          from '../../../util/pancake-grab';
-import { Configuration } from '../../../util/pancake-config';
+import { grab }             from '../../../util/pancake-grab';
+import { Configuration }    from '../../../util/pancake-config';
+import { EndpointResponse } from '../../../flagpole/apitypes';
 
 
 /****************************************************************************
@@ -33,7 +34,7 @@ let IdentityFactory = {
   },
 
   async loadItem(id: string, className: string, opts?: any) {
-    await sleep(getRandomInt(5*1000));
+    await sleep(getRandomInt(5*1000)+5);
     return { id, className: 'Identity', now: Date.now() };
   },
 
@@ -52,7 +53,7 @@ let IdentityFactory = {
  ****************************************************************************/
 
 
-export function initializeAPI(serverRestify: any, config?: Configuration) : void
+export function initializeAPI(config?: Configuration) : void
 {
   let maintenanceInterval: number = config ? config.get('MAINTENANCE_INTERVAL') : 60*5;
   let maxCacheSize: number        = config ? config.get('MAX_CACHE_SIZE') : 100;
@@ -67,82 +68,76 @@ export function initializeAPI(serverRestify: any, config?: Configuration) : void
 }
 
 
-async function getItem(req: any, res: any, next: Function) : Promise<any>
+async function getItem(payload: any) : Promise<EndpointResponse>
 {
   let item: any, status: number, result: any;
-  [result, item] = await grab(cache.get(req.body.id, req.body.className, req.body.opts));
+  [result, item] = await grab(cache.get(payload.id, payload.className, payload.opts));
 
   // Process the results
   status = (result || !item) ? 400 : 200;
   if (!result) {
     result = item ? { item } : cache.getLastError();
   }
-  res.send(status, result);
-  return next();
+  return { status, result };
 }
 
 
-async function getItemMultiple(req: any, res: any, next: Function) : Promise<any>
+async function getItemMultiple(payload: any) : Promise<EndpointResponse>
 {
   let items: any, status: number, result: any;
-  [result, items] = await grab(cache.getMultiple(req.body.idInfos));
+  [result, items] = await grab(cache.getMultiple(payload.idInfos));
 
   // Process the results
   status = (result || !items) ? 400 : 200;
   if (!result) {
     result = items ? { numItems: items.length, items } : cache.getLastError();
   }
-  res.send(status, result);
-  return next();
+  return { status, result };
 }
 
 
-async function setItem(req: any, res: any, next: Function) : Promise<any>
+async function setItem(payload: any) : Promise<EndpointResponse>
 {
   let item: any, status: number, result: any;
-  [result, item] = await grab(cache.set(req.body.id, req.body.obj, req.body.className, req.body.opts));
+  [result, item] = await grab(cache.set(payload.id, payload.obj, payload.className, payload.opts));
 
   // Process the results
   status = (result || !item) ? 400 : 200;
   if (!result) {
     result = item ? { id: item[0], item: item[1] } : cache.getLastError();
   }
-  res.send(status, result);
-  return next();
+  return { status, result };
 }
 
 
-async function loadItems(req: any, res: any, next: Function) : Promise<any>
+async function loadItems(payload: any) : Promise<EndpointResponse>
 {
   let items: any, status: number, result: any;
-  [result, items] = await grab(cache.load(req.body.query, req.body.className, req.body.opts));
+  [result, items] = await grab(cache.load(payload.query, payload.className, payload.opts));
 
   // Process the results
   status = (result || !items) ? 400 : 200;
   if (!result) {
     result = items ? { numItems: items.length, items } : cache.getLastError();
   }
-  res.send(status, result);
-  return next();
+  return { status, result };
 }
 
 
-function getStats(req: any, res: any, next: Function) : Promise<any>
+function getStats(payload: any) : EndpointResponse
 {
-  res.send(200, cache.getStats());
-  return next();
+  return { status: 200, result: cache.getStats() };
 }
 
 
-function dumpCache(req: any, res: any, next: Function) : Promise<any>
+function dumpCache(payload: any) : EndpointResponse
 {
   cache.dumpCache();
-  res.send(200);
-  return next();
+  return { status: 200 };
 }
 
 
-async function load10(req: any, res: any, next: Function) : Promise<any>
+async function load10(payload: any) : Promise<EndpointResponse>
 {
   let items: any[] = [];
   let status: number, result: any;
@@ -161,8 +156,7 @@ async function load10(req: any, res: any, next: Function) : Promise<any>
   if (!result) {
     result = items ? { numItems: items.length, items } : cache.getLastError();
   }
-  res.send(status, result);
-  return next();
+  return { status, result };
 }
 
 

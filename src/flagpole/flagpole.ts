@@ -7,10 +7,13 @@
 import path              = require('path');
 import fs                = require('fs');
 import _                 = require('lodash');
-import { PancakeError }  from '../util/pancake-err';
-import { Configuration } from '../util/pancake-config';
+import { PancakeError }    from '../util/pancake-err';
+import { Configuration }   from '../util/pancake-config';
+import { EndpointResponse,
+         EndpointHandler } from './apitypes';
 import utils             = require('../util/pancake-utils');
 const  log               = utils.log;
+import { TransportREST }   from './REST';
 
 
 /*********************************************a*******************************
@@ -51,11 +54,11 @@ interface _PathInfo {
 export class Flagpole
 {
   // Member data
-  private _serverRestify: any;
   private _envName: string;
   private _apiSearchDirs: string[] = [];
   private _requestTypes            = new Map<string, Function>();
   private _registeredAPIsByToken   = new Map<string, _ApiInfo>();
+  private _transportREST: TransportREST;
 
 
   /****************************************************************************
@@ -73,9 +76,9 @@ export class Flagpole
                              config?:         Configuration) : PancakeError // opt
   {
     // Simple validation
-    if (!this._serverRestify) {
-      log.trace('FP: ERR_FLAGPOLE_NOT_INIT');
-      return new PancakeError('ERR_FLAGPOLE_NOT_INIT');
+    if (!this._transportREST) {
+      log.trace('FP: ERR_TRANSPORT_NOT_INIT');
+      return new PancakeError('ERR_TRANSPORT_NOT_INIT');
     }
     if (!name || !ver || !apiHandler) {
       log.trace('FP: ERR_BAD_ARG');
@@ -117,25 +120,8 @@ export class Flagpole
       // pathInfo { requestType, path, handler, route (which we set) }
       newAPI.apiHandler.flagpoleHandlers.forEach((pathInfo: _PathInfo) => {
 
-        // Validate requestType
-        var httpRequestType = _.toLower(_.trim(pathInfo.requestType));
-        if (httpRequestType.match('get|post|put|patch|del|opts')) {
-
-          // Register the route
-          var funcRequestHandler = this._requestTypes.get(httpRequestType);
-          if (funcRequestHandler) {
-            pathInfo.route = funcRequestHandler.call(this._serverRestify, {
-              path: pathInfo.path,
-              version: newAPI.ver
-            },
-            pathInfo.handler);
-            log.trace(`FP: Registered route (${pathInfo.path}, ${newAPI.ver})`);
-          }
-        }
-        else {
-          log.trace(`FP: ERR_REGISTER_ROUTE: Bad request type: "${pathInfo.requestType}"`);
-          throw new PancakeError('ERR_REGISTER_ROUTE', `Bad request type: "${pathInfo.requestType}"`);
-        }
+        // Set it up
+        this._transportREST.registerAPIInstance(name, ver, pathInfo);
       });
     }
     catch (error) {
@@ -153,7 +139,7 @@ export class Flagpole
     // Let the API know
     if (newAPI.apiHandler.initializeAPI) {
       log.trace(`FP: Calling API initializer`);
-      newAPI.apiHandler.initializeAPI(this._serverRestify, config, name, ver, apiToken);
+      newAPI.apiHandler.initializeAPI(config, name, ver, apiToken);
     }
   }
 
@@ -171,9 +157,9 @@ export class Flagpole
                                fileName: string) : PancakeError
   {
     // Simple validation
-    if (!this._serverRestify) {
-      log.trace(`FP: ERR_FLAGPOLE_NOT_INIT`);
-      return new PancakeError('ERR_FLAGPOLE_NOT_INIT');
+    if (!this._transportREST) {
+      log.trace('FP: ERR_TRANSPORT_NOT_INIT');
+      return new PancakeError('ERR_TRANSPORT_NOT_INIT');
     }
     if (!name || !ver) {
       log.trace(`FP: ERR_BAD_ARG`);
@@ -231,9 +217,7 @@ export class Flagpole
     apiUnregInfo.apiHandler.flagpoleHandlers.forEach((pathInfo: _PathInfo) => {
 
       // Unregister the route
-      this._serverRestify.rm(pathInfo.route);
-      log.trace(`FP: Unregistered route (${pathInfo.route})`);
-      pathInfo.route = undefined;
+      this._transportREST.unregisterAPIInstance(apiUnregInfo.name, apiUnregInfo.ver, pathInfo);
     });
   }
 
@@ -276,23 +260,15 @@ export class Flagpole
    **                                                                        **
    ****************************************************************************/
 
-  initialize(server: any, opts: FlagpoleOpts) : void
+  initialize(serverRestify: any, opts: FlagpoleOpts) : void
   {
-    // Simple validation
-    if (!server) {
-      log.trace(`FP: ERR_BAD_ARG: Restify server instance not provided`);
-      throw new PancakeError('ERR_BAD_ARG');
-    }
-    if (opts.envName) this._envName = opts.envName;
-
-    // Set it all up
-    this._serverRestify = server;
-    this._requestTypes.set('get',   this._serverRestify.get);
-    this._requestTypes.set('post',  this._serverRestify.post);
-    this._requestTypes.set('put',   this._serverRestify.put);
-    this._requestTypes.set('patch', this._serverRestify.patch);
-    this._requestTypes.set('del',   this._serverRestify.del);
-    this._requestTypes.set('opts',  this._serverRestify.opts);
+    // Initialize our REST transport
+    let transportREST = new TransportREST();
+    transportREST.initialize({
+      serverRestify,
+      envName: opts.envName
+    });
+    this._transportREST = transportREST;
 
     // API dirs
     if (opts && opts.apiSearchDirs) {
@@ -340,9 +316,9 @@ export class Flagpole
     let found: boolean = false;
 
     // Simple validation
-    if (!this._serverRestify) {
-      log.trace(`FP: ERR_FLAGPOLE_NOT_INIT`);
-      return new PancakeError('ERR_FLAGPOLE_NOT_INIT');
+    if (!this._transportREST) {
+      log.trace('FP: ERR_TRANSPORT_NOT_INIT');
+      return new PancakeError('ERR_TRANSPORT_NOT_INIT');
     }
 
     // No args means wipe them all out
@@ -399,9 +375,9 @@ export class Flagpole
   loadAPIConfig(configFile: string) : PancakeError
   {
     // Simple validation
-    if (!this._serverRestify) {
-      log.trace(`FP: ERR_FLAGPOLE_NOT_INIT`);
-      return new PancakeError('ERR_FLAGPOLE_NOT_INIT');
+    if (!this._transportREST) {
+      log.trace('FP: ERR_TRANSPORT_NOT_INIT');
+      return new PancakeError('ERR_TRANSPORT_NOT_INIT');
     }
     if (!configFile) {
       log.trace(`FP: ERR_NO_CONFIG_FILE`);

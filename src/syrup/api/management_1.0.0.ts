@@ -9,6 +9,7 @@ import * as util    from '../../util/pancake-utils';
 import { grab }     from '../../util/pancake-grab';
 import { flagpole } from '../../flagpole/flagpole';
 const log = util.log;
+import { EndpointResponse } from '../../flagpole/apitypes';
 
 
 /****************************************************************************
@@ -19,7 +20,6 @@ const log = util.log;
 
 const DEFAULT_SHUTDOWN_TIMER = 5; // 5 seconds
 
-let _server: any;
 let _nameThisAPI: string;
 let _verThisAPI: string;
 let _serverStart: number;
@@ -35,29 +35,24 @@ let _timerID: NodeJS.Timer;
 
 function _shutdownServer() : void
 {
-  if (_shutdownCountdown > 0) {
-    _shutdownCountdown--;
+  _shutdownCountdown--;
 
-    if (_shutdownCountdown === 0) {
-      // Do it!
-      log.warn('MGMT: Server shutting down now.');
-      _server.close();
-      process.exit(0);
-    }
-    else {
-      log.warn(`MGMT: Server shutting down in ${_shutdownCountdown} seconds.`);
-      _timerID = setTimeout(_shutdownServer, _shutdownCountdown*1000);
-    }
+  if (_shutdownCountdown <= 0) {
+    // Do it!
+    log.warn('MGMT: Server shutting down now.');
+    process.exit(0);
+  }
+  else {
+    log.warn(`MGMT: Server shutting down in ${_shutdownCountdown} seconds.`);
+    _timerID = setTimeout(_shutdownServer, _shutdownCountdown*1000);
   }
 }
 
 
-export function initializeAPI(server: any,
-                              name: string,
+export function initializeAPI(name: string,
                               ver: string,
                               apiToken:string) : void
 {
-  _server            = server;
   _nameThisAPI       = name;
   _verThisAPI        = ver;
   _serverStart       = Date.now();
@@ -65,9 +60,15 @@ export function initializeAPI(server: any,
 }
 
 
-function _shutdown(req: any, res: any, next: Function)
+function _shutdown(payload: any) : EndpointResponse
 {
-  _shutdownCountdown = (req.body && req.body.countdown) ? req.body.countdown : DEFAULT_SHUTDOWN_TIMER;
+  let countdown: any = payload.countdown ? payload.countdown : DEFAULT_SHUTDOWN_TIMER;
+  if (!util.isNumeric(countdown)) {
+    _shutdownCountdown = Number.parseInt(countdown, 10);
+  }
+  else {
+    _shutdownCountdown = countdown;
+  }
 
   // Kick off our timer
   if (_timerID) {
@@ -79,12 +80,11 @@ function _shutdown(req: any, res: any, next: Function)
   let message = `Server shutting down in ${_shutdownCountdown} seconds.`;
   log.warn('MGMT: ' + message);
 
-  res.send(200, { alert: message });
-  return next();
+  return { status: 200, result: { alert: message }};
 }
 
 
-function _cancelShutdown(req: any, res: any, next: Function)
+function _cancelShutdown(payload: any) : EndpointResponse
 {
   let message: string;
   if (_shutdownCountdown > 0)
@@ -97,39 +97,37 @@ function _cancelShutdown(req: any, res: any, next: Function)
   else {
     message = 'Server not shutting down. Nothing to cancel.';
   }
-  res.send(200, { alert: message });
-  return next();
+  return { status: 200, result: { alert: message }};
 }
 
 
-function _logBookmark(req: any, res: any, next: Function)
+function _logBookmark(payload: any) : EndpointResponse
 {
-  if (req.body && req.body.seq) {
-    log.info(`===== ${req.body.seq} ===== ${req.body.seq} ===== ${req.body.seq} ===== ${req.body.seq} ===== ${req.body.seq} ====== ${req.body.seq} ===== ${req.body.seq} ===== ${req.body.seq} =====`);
+  if (payload.seq) {
+    log.info(`===== ${payload.seq} ===== ${payload.seq} ===== ${payload.seq} ===== ${payload.seq} ===== ${payload.seq} ====== ${payload.seq} ===== ${payload.seq} ===== ${payload.seq} =====`);
   }
   else {
     log.info('=========================================================================');
   }
-  res.send(200);
-  return next();
+  return { status: 200 };
 }
 
 
-function _setLogLevel(req: any, res: any, next: Function)
+function _setLogLevel(payload: any) : EndpointResponse
 {
   let status: number, reason: string;
 
-  if (req.body && req.body.level) {
-    let ordLevel: number = log.getLevelOrd(req.body.level);
+  if (payload.level) {
+    let ordLevel: number = log.getLevelOrd(payload.level);
     if (ordLevel) {
-      log.level = req.body.level;
+      log.level = payload.level;
       status = 200;
       reason = `Logging level has been set to ${log.levelAsString}.`;
       log.info(`MGMT: ${reason}`);
     }
     else {
       status = 400;
-      reason = `Invalid logging level ('${req.body.level}') specified.`;
+      reason = `Invalid logging level ('${payload.level}') specified.`;
       log.trace(`MGMT: ${reason}`);
     }
   }
@@ -138,17 +136,16 @@ function _setLogLevel(req: any, res: any, next: Function)
     reason = `Logging level not specified.`;
     log.trace(`MGMT: ${reason}`);
   }
-  res.send(status, { reason });
-  return next();
+  return { status, result: { reason }};
 }
 
 
-function _reloadAPIConfig(req: any, res: any, next: Function)
+function _reloadAPIConfig(payload: any) : EndpointResponse
 {
   let status: number, reason: string, err: any;
 
-  if (req.body && req.body.fileName) {
-    err = flagpole.loadAPIConfig(req.body.fileName);
+  if (payload.fileName) {
+    err = flagpole.loadAPIConfig(payload.fileName);
     if (!err) {
       status = 200;
       reason = `API config file has been reloaded.`;
@@ -165,61 +162,51 @@ function _reloadAPIConfig(req: any, res: any, next: Function)
     reason = 'Config filename not specified.';
     log.trace(`MGMT: ${reason}`);
   }
-  res.send(status, { reason, err });
-  return next();
+  return { status, result: { reason, err }};
 }
 
 
-function _unregisterAPI(req: any, res: any, next: Function)
+function _unregisterAPI(payload: any) : EndpointResponse
 {
   let status: number, reason: string, name: string, ver: string, err: any;
 
-  if (req.body) {
-    name = _.toLower(_.trim(req.body.name));
-    ver = req.body.ver;
-    if (name === _nameThisAPI && ver === _verThisAPI) {
-      status = 400;
-      reason = `This management API ('${name}', v${ver}) cannot be unregistered.`;
-      log.trace(`MGMT: ${reason}`);
-    }
-    else {
-      err = flagpole.unregisterAPI(name, ver);
-      if (!err) {
-        status = 200;
-        reason = `API '${name}', v${ver} has been unregistered.`;
-        log.trace(`MGMT: ${reason}`);
-      }
-    }
+  name = _.toLower(_.trim(payload.name));
+  ver = payload.ver;
+  if (name === _nameThisAPI && ver === _verThisAPI) {
+    status = 400;
+    reason = `This management API ('${name}', v${ver}) cannot be unregistered.`;
+    log.trace(`MGMT: ${reason}`);
   }
   else {
-    status = 400;
-    reason = `This management API ('${_nameThisAPI}', v${_verThisAPI}) cannot be unregistered.`;
-    log.trace(`MGMT: ${reason}`);
+    err = flagpole.unregisterAPI(name, ver);
+    if (!err) {
+      status = 200;
+      reason = `API '${name}', v${ver} has been unregistered.`;
+      log.trace(`MGMT: ${reason}`);
+    }
   }
   if (!status) {
     status = 400;
     reason = `API '${name}', v${ver} could not be unregistered.`;
     log.trace(`MGMT: ${reason}`);
   }
-  res.send(status, { reason, err });
-  return next();
+  return { status, result: { reason, err }};
 }
 
 
-function _getAPIs(req: any, res: any, next: Function)
+function _getAPIs(payload: any) : EndpointResponse
 {
-  res.send(200, flagpole.queryAPIs());
   log.trace(`MGMT: Returned list of registered APIs.`);
-  return next();
+  return { status: 200, result: flagpole.queryAPIs()};
 }
 
 
-function _getStats(req: any, res: any, next: Function)
+function _getStats(payload: any) : EndpointResponse
 {
-  res.send(200, {
-    uptime: util.getTimeComponents(Date.now() - _serverStart)
-  });
-  return next();
+  return { status: 200, result: {
+    uptime: util.getTimeComponents(Date.now() - _serverStart),
+    memstats: process.memoryUsage()
+  }};
 }
 
 
