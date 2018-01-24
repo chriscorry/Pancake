@@ -6,6 +6,7 @@
 
 import path             = require('path');
 import restify          = require('restify');
+import socketIO         = require('socket.io');
 
 const { log }           = require('../util/pancake-utils');
 const { Configuration } = require('../util/pancake-config');
@@ -73,6 +74,8 @@ export function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
   serverRestify.use(restify.plugins.bodyParser());
   serverRestify.use(restify.plugins.queryParser());
 
+  // SOCKET.IO
+  let serverSocketIO = socketIO.listen(serverRestify.server);
 
   // FLAGPOLE
   let apiSearchDirs: string = '';
@@ -83,7 +86,7 @@ export function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
   apiSearchDirs += (path.resolve() + path.delimiter);
   apiSearchDirs += (__dirname + '/../../config' + path.delimiter);
   apiSearchDirs += (__dirname + '/../syrup/api');
-  flagpole.initialize(serverRestify, { apiSearchDirs, envName: config.envName });
+  flagpole.initialize(serverRestify, serverSocketIO, { apiSearchDirs, envName: config.envName });
 
 
   /****************************************************************************

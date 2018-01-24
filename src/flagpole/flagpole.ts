@@ -13,7 +13,10 @@ import { EndpointResponse,
          EndpointHandler } from './apitypes';
 import utils             = require('../util/pancake-utils');
 const  log               = utils.log;
-import { TransportREST }   from './REST';
+
+// Transports
+import { TransportREST }       from './REST';
+import { TransportSocketIO }   from './websockets';
 
 
 /*********************************************a*******************************
@@ -44,6 +47,9 @@ interface _PathInfo {
   route:       string
 }
 
+//Events
+const EVT_NEGOTIATE = 'negotiate';
+
 
 /****************************************************************************
  **                                                                        **
@@ -58,7 +64,11 @@ export class Flagpole
   private _apiSearchDirs: string[] = [];
   private _requestTypes            = new Map<string, Function>();
   private _registeredAPIsByToken   = new Map<string, _ApiInfo>();
+  private _pendingWSClients        = new Set<any>();
+
+  // Transports
   private _transportREST: TransportREST;
+  private _transportSocketIO: TransportSocketIO;
 
 
   /****************************************************************************
@@ -260,7 +270,7 @@ export class Flagpole
    **                                                                        **
    ****************************************************************************/
 
-  initialize(serverRestify: any, opts: FlagpoleOpts) : void
+  initialize(serverRestify: any, serverSocketIO: any, opts: FlagpoleOpts) : void
   {
     // Initialize our REST transport
     let transportREST = new TransportREST();
@@ -269,6 +279,18 @@ export class Flagpole
       envName: opts.envName
     });
     this._transportREST = transportREST;
+
+    // Initialize our SocketIO transport
+    let transportSocketIO = new TransportSocketIO();
+    transportSocketIO.initialize({
+      serverSocketIO,
+      envName: opts.envName
+    });
+    this._transportSocketIO = transportSocketIO;
+
+    // We need to hear aboiut connects and disconnects
+    serverSocketIO.on('connect', this._onConnect);
+    serverSocketIO.on('disconnect', this._onDisconnect);
 
     // API dirs
     if (opts && opts.apiSearchDirs) {
@@ -457,6 +479,52 @@ export class Flagpole
     return apis;
   }
 
+
+  /****************************************************************************
+   **                                                                        **
+   ** Websockets                                                             **
+   **                                                                        **
+   ****************************************************************************/
+
+  _onConnect(socket: any) : PancakeError
+  {
+    this._pendingWSClients.add(socket);
+
+    // Register our interest in negotiation events
+    socket.on(EVT_NEGOTIATE, (payload:any) => {
+      payload.socket = socket;
+      return this._onNegotiate(payload);
+    });
+    log.trace('FP: Websocket connect.');
+    log.trace(socket);
+    return;
+  }
+
+
+  _onDisconnect(socket: any, callback: Function) : PancakeError
+  {
+    this._pendingWSClients.delete(socket);
+    log.trace('FP: Websocket disconnect.');
+    log.trace(socket);
+    return;
+  }
+
+
+  private _onNegotiate(payload: any) : PancakeError
+  {
+    let socket = payload.socket;
+
+    if (this._pendingWSClients.has(socket)) {
+
+      let name = payload.name;
+      let ver = payload.ver;
+
+      log.trace('FP: Websocket negotiate.');
+      log.trace(`FP:   ${name}, v${ver}`);
+    }
+
+    return;
+  }
 } // END class Flagpole
 
 

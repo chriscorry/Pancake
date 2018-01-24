@@ -7,8 +7,8 @@
         "allowSyntheticDefaultImports": true,
         "sourceMap": true,
         "outDir": "dist",
-        "allowJs": true,
-        "baseUrl": ".",
+        "allowJs": false,
+        "baseUrl": "src",
         "paths": {
             "*": [
                 "node_modules/*",
