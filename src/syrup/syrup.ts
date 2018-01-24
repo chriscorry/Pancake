@@ -71,6 +71,8 @@ export function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
   // TODO: pass in certs and key for HTTPS
   let serverRestify = restify.createServer({name: serverName});
   serverRestify.use(restify.plugins.bodyParser());
+  serverRestify.use(restify.plugins.queryParser());
+
 
   // FLAGPOLE
   let apiSearchDirs: string = '';

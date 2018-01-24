@@ -62,7 +62,7 @@ export function initializeAPI(name: string,
 
 function _shutdown(payload: any) : EndpointResponse
 {
-  let countdown: any = payload.countdown ? payload.countdown : DEFAULT_SHUTDOWN_TIMER;
+  let countdown: any = payload.hasOwnProperty('countdown') ? payload.countdown : DEFAULT_SHUTDOWN_TIMER;
   if (!util.isNumeric(countdown)) {
     _shutdownCountdown = Number.parseInt(countdown, 10);
   }
@@ -215,8 +215,8 @@ export let flagpoleHandlers = [
   { requestType: 'post',  path: '/management/setloglevel',     handler: _setLogLevel },
   { requestType: 'patch', path: '/management/reloadapis',      handler: _reloadAPIConfig },
   { requestType: 'get',   path: '/management/apis',            handler: _getAPIs },
-  { requestType: 'del',   path: '/management/unregisterapi',   handler: _unregisterAPI },
-  { requestType: 'get',   path: '/management/stats',           handler: _getStats },
+  { requestType: 'del',   path: '/management/:fox/unregisterapi',   handler: _unregisterAPI },
+  { requestType: 'get',   path: '/management/stats/',          handler: _getStats },
   { requestType: 'post',  path: '/management/shutdown',        handler: _shutdown },
   { requestType: 'get',   path: '/management/cancelshutdown',  handler: _cancelShutdown }
 ];

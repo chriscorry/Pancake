@@ -28,8 +28,8 @@ export class TransportREST implements Transport
 
   private _buildPayload(req: any)
   {
-    let payload = req.body;
-    if (!payload) payload = {};
+    let payload = req.body ? req.body : { };
+    Object.assign(payload, req.query, req.params);
     return payload;
   }
 
