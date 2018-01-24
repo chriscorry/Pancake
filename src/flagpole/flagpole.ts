@@ -289,8 +289,8 @@ export class Flagpole
     this._transportSocketIO = transportSocketIO;
 
     // We need to hear aboiut connects and disconnects
-    serverSocketIO.on('connect', this._onConnect);
-    serverSocketIO.on('disconnect', this._onDisconnect);
+    serverSocketIO.sockets.on('connect', this._onConnect);
+    serverSocketIO.sockets.on('disconnect', this._onDisconnect);
 
     // API dirs
     if (opts && opts.apiSearchDirs) {

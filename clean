@@ -1,8 +1,5 @@
 #! /usr/bin/env bash
 echo 'Removing targets from dist directory...'
-pancake
-cd dist
-find . -type f -name '*.js' -exec rm "{}" +
-find . -type f -name '*.map' -exec rm "{}" +
-pancake
+find ~/Dropbox/Tech/Projects/Pancake/dist -type f -name '*.js' -exec rm "{}" +
+find ~/Dropbox/Tech/Projects/Pancake/dist -type f -name '*.map' -exec rm "{}" +
 echo 'Complete.'

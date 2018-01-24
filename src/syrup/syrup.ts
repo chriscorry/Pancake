@@ -5,6 +5,7 @@
  ****************************************************************************/
 
 import path             = require('path');
+import fs               = require('fs');
 import restify          = require('restify');
 import socketIO         = require('socket.io');
 
@@ -73,6 +74,9 @@ export function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
   let serverRestify = restify.createServer({name: serverName});
   serverRestify.use(restify.plugins.bodyParser());
   serverRestify.use(restify.plugins.queryParser());
+  // serverRestify.get(/\/(.*)?.*/, restify.plugins.serveStatic({
+  //   directory: __dirname + '/../../public',
+  // }));
 
   // SOCKET.IO
   let serverSocketIO = socketIO.listen(serverRestify.server);
@@ -111,6 +115,7 @@ export function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
   if (err) {
     log.warn(`SYRUP: No user API loaded. (${configFile})`);
   }
+
 
   // Start processing requests
   serverRestify.listen(port, () => {
