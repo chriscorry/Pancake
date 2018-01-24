@@ -289,8 +289,8 @@ export class Flagpole
     this._transportSocketIO = transportSocketIO;
 
     // We need to hear aboiut connects and disconnects
-    serverSocketIO.sockets.on('connect', this._onConnect);
-    serverSocketIO.sockets.on('disconnect', this._onDisconnect);
+    serverSocketIO.sockets.on('connect', this._onConnect.bind(this));
+    serverSocketIO.sockets.on('disconnect', this._onDisconnect.bind(this));
 
     // API dirs
     if (opts && opts.apiSearchDirs) {
@@ -489,14 +489,13 @@ export class Flagpole
   _onConnect(socket: any) : PancakeError
   {
     this._pendingWSClients.add(socket);
+    log.trace('FP: Websocket connect.');
 
     // Register our interest in negotiation events
     socket.on(EVT_NEGOTIATE, (payload:any) => {
       payload.socket = socket;
       return this._onNegotiate(payload);
     });
-    log.trace('FP: Websocket connect.');
-    log.trace(socket);
     return;
   }
 
@@ -505,7 +504,6 @@ export class Flagpole
   {
     this._pendingWSClients.delete(socket);
     log.trace('FP: Websocket disconnect.');
-    log.trace(socket);
     return;
   }
 

@@ -74,9 +74,14 @@ export function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
   let serverRestify = restify.createServer({name: serverName});
   serverRestify.use(restify.plugins.bodyParser());
   serverRestify.use(restify.plugins.queryParser());
-  // serverRestify.get(/\/(.*)?.*/, restify.plugins.serveStatic({
-  //   directory: __dirname + '/../../public',
-  // }));
+  serverRestify.get('/', restify.plugins.serveStatic({
+    directory: __dirname + '/../../public',
+    default: '/index.html'
+  }));
+  serverRestify.get('/js', restify.plugins.serveStatic({
+    directory: __dirname + '/../../public',
+    default: '/index.js'
+  }));
 
   // SOCKET.IO
   let serverSocketIO = socketIO.listen(serverRestify.server);
