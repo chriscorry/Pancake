@@ -9,7 +9,8 @@ import fs                = require('fs');
 import _                 = require('lodash');
 import { PancakeError }    from '../util/pancake-err';
 import { Configuration }   from '../util/pancake-config';
-import { EndpointResponse,
+import { EndpointInfo,
+         EndpointResponse,
          EndpointHandler } from './apitypes';
 import utils             = require('../util/pancake-utils');
 const  log               = utils.log;
@@ -40,14 +41,6 @@ interface _ApiInfo {
   fileName:        string
 }
 
-interface _PathInfo {
-  requestType: string,
-  path:        string,
-  event:       string,
-  handler:     Function,
-  route:       string
-}
-
 //Events
 const EVT_NEGOTIATE = 'negotiate';
 
@@ -65,6 +58,7 @@ export class Flagpole
   private _apiSearchDirs: string[] = [];
   private _registeredAPIsByToken   = new Map<string, _ApiInfo>();
   private _pendingWSClients        = new Set<any>();
+  private _currentWSClients        = new Set<any>();
 
   // Transports
   private _transportREST: TransportREST;
@@ -122,24 +116,23 @@ export class Flagpole
       apiToken,
       fileName
     };
-    let pathInfo: _PathInfo;
+    let endpointInfo: EndpointInfo;
 
     try {
       // Register the routes
-      // newApi.apiHandler.flagpoleHandlers is an array of pathInfos
-      // pathInfo { requestType, path, handler, route (which we set) }
-      newAPI.apiHandler.flagpoleHandlers.forEach((pathInfo: _PathInfo) => {
+      // newApi.apiHandler.flagpoleHandlers is an array of EndpointInfos
+      newAPI.apiHandler.flagpoleHandlers.forEach((endpointInfo: EndpointInfo) => {
 
         // Set it up
-        this._transportREST.registerAPIInstance(name, ver, pathInfo);
+        this._transportREST.registerAPIInstance(name, ver, endpointInfo);
       });
     }
     catch (error) {
       if (error instanceof PancakeError) {
         return error;
       }
-      log.trace(`FP: ERR_REGISTER_ROUTE: Could not register route: "${pathInfo.requestType}", "${pathInfo.path}", ${newAPI.ver}`);
-      return new PancakeError('ERR_REGISTER_ROUTE', `Could not register route: "${pathInfo.requestType}", "${pathInfo.path}", ${newAPI.ver}`, error);
+      log.trace(`FP: ERR_REGISTER_ROUTE: Could not register route: "${endpointInfo.requestType}", "${endpointInfo.path}", ${newAPI.ver}`);
+      return new PancakeError('ERR_REGISTER_ROUTE', `Could not register route: "${endpointInfo.requestType}", "${endpointInfo.path}", ${newAPI.ver}`, error);
     }
 
     // Add to the main API collection
@@ -224,10 +217,10 @@ export class Flagpole
   private _unregisterAPIInfo(apiUnregInfo: _ApiInfo) : void
   {
     // Iterate over each route and remove
-    apiUnregInfo.apiHandler.flagpoleHandlers.forEach((pathInfo: _PathInfo) => {
+    apiUnregInfo.apiHandler.flagpoleHandlers.forEach((endpointInfo: EndpointInfo) => {
 
       // Unregister the route
-      this._transportREST.unregisterAPIInstance(apiUnregInfo.name, apiUnregInfo.ver, pathInfo);
+      this._transportREST.unregisterAPIInstance(apiUnregInfo.name, apiUnregInfo.ver, endpointInfo);
     });
   }
 
@@ -516,7 +509,7 @@ export class Flagpole
   {
     let socket = payload.socket;
 
-    if (this._pendingWSClients.has(socket)) {
+    if (this._pendingWSClients.has(socket) || this._currentWSClients.has(socket)) {
 
       // Build the API token
       let name = payload.name;
@@ -529,35 +522,38 @@ export class Flagpole
       if (apiInfo) {
 
         // Loop through the API...
-        apiInfo.apiHandler.flagpoleHandlers.forEach((pathInfo: _PathInfo) => {
+        apiInfo.apiHandler.flagpoleHandlers.forEach((endpointInfo: EndpointInfo) => {
 
           // ...and register the endpoints with this socket
-          let eventName = name + ':' + pathInfo.event;
-          socket.on(eventName, async (payload:any, ack:Function) : Promise<any> => {
-            try {
-              if (!payload) payload = {};
-              payload.socket = socket;
-              let resp = await pathInfo.handler(payload);
-              if (ack) {
-                if (resp.err) {
-                  ack(resp.err);
+          if (endpointInfo.event) {
+            let eventName = name + ':' + endpointInfo.event;
+            socket.on(eventName, async (payload:any, ack:Function) : Promise<any> => {
+              try {
+                if (!payload) payload = {};
+                payload.socket = socket;
+                let resp = await endpointInfo.handler(payload);
+                if (ack) {
+                  if (resp.err) {
+                    ack(resp.err);
+                  }
+                  else if (resp.status || resp.result) {
+                    ack({ status: resp.status, result: resp.result});
+                  }
                 }
-                else if (resp.status || resp.result) {
-                  ack({ status: resp.status, result: resp.result});
-                }
+                return resp.result;
               }
-              return resp.result;
-            }
-            catch (err) {
-              log.error('FP: Unexpected exception. (SocketIO)', err)
-              return err;
-            }
-          });
-          log.trace(`FP: Registered socket event handler (${eventName}, v${ver})`);
+              catch (err) {
+                log.error('FP: Unexpected exception. (SocketIO)', err)
+                return err;
+              }
+            });
+            log.trace(`FP: Registered socket event handler (${eventName}, v${ver})`);
+          }
         });
 
         // No longer a pending client
         this._pendingWSClients.delete(socket);
+        this._currentWSClients.add(socket);
 
         log.trace('FP: Websocket negotiate success.');
         log.trace(`FP:   ${name}, v${ver}`);

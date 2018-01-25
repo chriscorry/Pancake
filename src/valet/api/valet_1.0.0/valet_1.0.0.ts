@@ -167,11 +167,11 @@ async function load10(payload: any) : Promise<EndpointResponse>
  ****************************************************************************/
 
 export let flagpoleHandlers = [
-  { requestType: 'post',  path: '/cache/item',    handler: getItem },
-  { requestType: 'post',  path: '/cache/items',   handler: getItemMultiple },
-  { requestType: 'post',  path: '/cache/set',     handler: setItem },
-  { requestType: 'post',  path: '/cache/load',    handler: loadItems },
-  { requestType: 'get',   path: '/cache/stats',   handler: getStats },
-  { requestType: 'get',   path: '/cache/dump',    handler: dumpCache },
-  { requestType: 'get',   path: '/cache/load10',  handler: load10 }
+  { requestType: 'post',  path: '/cache/item',    event: 'item',   handler: getItem },
+  { requestType: 'post',  path: '/cache/items',   event: 'items',  handler: getItemMultiple },
+  { requestType: 'post',  path: '/cache/set',     event: 'set',    handler: setItem },
+  { requestType: 'post',  path: '/cache/load',    event: 'load',   handler: loadItems },
+  { requestType: 'get',   path: '/cache/stats',   event: 'stats',  handler: getStats },
+  { requestType: 'get',   path: '/cache/dump',    event: 'dump',   handler: dumpCache },
+  { requestType: 'get',   path: '/cache/load10',  event: 'load10', handler: load10 }
 ];

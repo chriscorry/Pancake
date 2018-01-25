@@ -6,7 +6,8 @@
 
 import _              = require('lodash');
 import { PancakeError }    from '../util/pancake-err';
-import { EndpointResponse,
+import { EndpointInfo,
+         EndpointResponse,
          EndpointHandler } from './apitypes';
 import { Transport }       from './transport';
 import utils          = require('../util/pancake-utils');
@@ -69,40 +70,43 @@ export class TransportREST implements Transport
   //   OUT route
   // }
 
-  registerAPIInstance(name:string, ver: any, endpointInfo: any) : PancakeError
+  registerAPIInstance(name:string, ver: string, endpointInfo: EndpointInfo) : PancakeError
   {
-    // Validate requestType
-    let httpRequestType = _.toLower(_.trim(endpointInfo.requestType));
-    if (httpRequestType.match('get|post|put|patch|del|opts')) {
+    if (endpointInfo.requestType && endpointInfo.path) {
 
-      // Register the route
-      let funcRequestHandler = this._requestTypes.get(httpRequestType);
-      if (funcRequestHandler) {
-        endpointInfo.route = funcRequestHandler.call(this._serverRestify, {
-          path: endpointInfo.path,
-          version: ver
-        },
+      // Validate requestType
+      let httpRequestType = _.toLower(_.trim(endpointInfo.requestType));
+      if (httpRequestType.match('get|post|put|patch|del|opts')) {
 
-        // Wrapper function
-        async (req: any, res: any, next: Function) : Promise<any> => {
-          let apiRes: EndpointResponse;
-          try {
-              let payload = this._buildPayload(req);
-              apiRes = await endpointInfo.handler(payload);
-              res.send(apiRes.status, apiRes.result);
-              return next(apiRes.err)
-          }
-          catch (err) {
-            log.error('FP: Unexpected exception. (REST)', err)
-            return next(err);
-          }
-        });
-        log.trace(`FP: Registered route (${endpointInfo.path}, ${ver})`);
+        // Register the route
+        let funcRequestHandler = this._requestTypes.get(httpRequestType);
+        if (funcRequestHandler) {
+          endpointInfo.route = funcRequestHandler.call(this._serverRestify, {
+            path: endpointInfo.path,
+            version: ver
+          },
+
+          // Wrapper function
+          async (req: any, res: any, next: Function) : Promise<any> => {
+            let apiRes: EndpointResponse;
+            try {
+                let payload = this._buildPayload(req);
+                apiRes = await endpointInfo.handler(payload);
+                res.send(apiRes.status, apiRes.result);
+                return next(apiRes.err)
+            }
+            catch (err) {
+              log.error('FP: Unexpected exception. (REST)', err)
+              return next(err);
+            }
+          });
+          log.trace(`FP: Registered route (${endpointInfo.path}, ${ver})`);
+        }
       }
-    }
-    else {
-      log.trace(`FP: ERR_REGISTER_ROUTE: Bad request type: "${endpointInfo.requestType}"`);
-      throw new PancakeError('ERR_REGISTER_ROUTE', `Bad request type: "${endpointInfo.requestType}"`);
+      else {
+        log.trace(`FP: ERR_REGISTER_ROUTE: Bad request type: "${endpointInfo.requestType}"`);
+        throw new PancakeError('ERR_REGISTER_ROUTE', `Bad request type: "${endpointInfo.requestType}"`);
+      }
     }
     return;
   }
@@ -113,7 +117,7 @@ export class TransportREST implements Transport
   //   IN route
   // }
 
-  unregisterAPIInstance(name: string, ver: string, endpointInfo: any) : PancakeError
+  unregisterAPIInstance(name: string, ver: string, endpointInfo: EndpointInfo) : PancakeError
   {
     // Unregister the route
     this._serverRestify.rm(endpointInfo.route);

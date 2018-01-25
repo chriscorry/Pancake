@@ -4,10 +4,11 @@
  **                                                                        **
  ****************************************************************************/
 
-import socketIO       = require('socket.io');
-import _              = require('lodash');
+// import socketIO       = require('socket.io');
+// import _              = require('lodash');
 import { PancakeError }    from '../util/pancake-err';
-import { EndpointResponse,
+import { EndpointInfo,
+         EndpointResponse,
          EndpointHandler } from './apitypes';
 import { Transport }       from './transport';
 import utils          = require('../util/pancake-utils');
@@ -57,7 +58,7 @@ export class TransportSocketIO implements Transport
   //   IN eventName
   // }
 
-  registerAPIInstance(name:string, ver: any, endpointInfo: any) : PancakeError
+  registerAPIInstance(name:string, ver: string, endpointInfo: EndpointInfo) : PancakeError
   {
     return;
   }
@@ -68,7 +69,7 @@ export class TransportSocketIO implements Transport
   //   IN eventName
   // }
 
-  unregisterAPIInstance(name: string, ver: string, endpointInfo: any) : PancakeError
+  unregisterAPIInstance(name: string, ver: string, endpointInfo: EndpointInfo) : PancakeError
   {
     return;
   }
