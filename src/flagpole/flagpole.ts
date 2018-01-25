@@ -282,8 +282,7 @@ export class Flagpole
     this._transportSocketIO = transportSocketIO;
 
     // We need to hear aboiut connects and disconnects
-    serverSocketIO.sockets.on('connect', this._onConnect.bind(this));
-    serverSocketIO.sockets.on('disconnect', this._onDisconnect.bind(this));
+    serverSocketIO.sockets.on('connection', this._onConnect.bind(this));
 
     // API dirs
     if (opts && opts.apiSearchDirs) {
@@ -482,9 +481,12 @@ export class Flagpole
   _onConnect(socket: any) : PancakeError
   {
     this._pendingWSClients.add(socket);
-    log.trace('FP: Websocket connect.');
+    log.trace(`FP: Websocket connect. (${socket.id})`);
 
-    // Register our interest in negotiation events
+    // Register our interest in disconnect and negotiation events
+    socket.on('disconnect', (reason: string) : any => {
+      this._onDisconnect(reason, socket);
+    });
     socket.on(EVT_NEGOTIATE, (payload:any, ack:Function) : any => {
       payload.socket = socket;
       let resp = this._onNegotiate(payload);
@@ -497,11 +499,11 @@ export class Flagpole
   }
 
 
-  _onDisconnect(socket: any, callback: Function) : PancakeError
+  _onDisconnect(reason: string, socket: any) : void
   {
     this._pendingWSClients.delete(socket);
-    log.trace('FP: Websocket disconnect.');
-    return;
+    this._currentWSClients.delete(socket);
+    log.trace(`FP: Websocket disconnect. (${socket.id})`);
   }
 
 
@@ -527,6 +529,8 @@ export class Flagpole
           // ...and register the endpoints with this socket
           if (endpointInfo.event) {
             let eventName = name + ':' + endpointInfo.event;
+
+            // Register with wrapper function
             socket.on(eventName, async (payload:any, ack:Function) : Promise<any> => {
               try {
                 if (!payload) payload = {};
@@ -555,14 +559,12 @@ export class Flagpole
         this._pendingWSClients.delete(socket);
         this._currentWSClients.add(socket);
 
-        log.trace('FP: Websocket negotiate success.');
-        log.trace(`FP:   ${name}, v${ver}`);
+        log.trace(`FP: Websocket negotiate success. ${name}, v${ver}`);
         return { _status: 'SUCCESS' };
       }
 
       // No dice
-      log.trace('FP: Websocket negotiate failed.');
-      log.trace(`FP:   ${name}, v${ver}`);
+      log.trace(`FP: Websocket negotiate failed. ${name}, v${ver}`);
       return new PancakeError('ERR_API_NOT_FOUND');
     }
 
