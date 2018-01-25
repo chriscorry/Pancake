@@ -211,12 +211,12 @@ function _getStats(payload: any) : EndpointResponse
 
 
 export let flagpoleHandlers = [
-  { requestType: 'post',  path: '/management/logbookmark',    event: 'logBookmark', handler: _logBookmark },
-  { requestType: 'post',  path: '/management/setloglevel',                          handler: _setLogLevel },
-  { requestType: 'patch', path: '/management/reloadapis',                           handler: _reloadAPIConfig },
-  { requestType: 'get',   path: '/management/apis',                                 handler: _getAPIs },
-  { requestType: 'del',   path: '/management/unregisterapi',                        handler: _unregisterAPI },
-  { requestType: 'get',   path: '/management/stats/',                               handler: _getStats },
-  { requestType: 'post',  path: '/management/shutdown',                             handler: _shutdown },
-  { requestType: 'get',   path: '/management/cancelshutdown',                       handler: _cancelShutdown }
+  { requestType: 'post',  path: '/management/logbookmark',    event: 'logBookmark',    handler: _logBookmark },
+  { requestType: 'post',  path: '/management/setloglevel',    event: 'setLogLevel',    handler: _setLogLevel },
+  { requestType: 'patch', path: '/management/reloadapis',     event: 'reloadAPIs',     handler: _reloadAPIConfig },
+  { requestType: 'get',   path: '/management/apis',           event: 'apis',           handler: _getAPIs },
+  { requestType: 'del',   path: '/management/unregisterapi',  event: 'unregisterapi',  handler: _unregisterAPI },
+  { requestType: 'get',   path: '/management/stats/',         event: 'stats',          handler: _getStats },
+  { requestType: 'post',  path: '/management/shutdown',       event: 'shutdown',       handler: _shutdown },
+  { requestType: 'get',   path: '/management/cancelshutdown', event: 'cancelShutdown', handler: _cancelShutdown }
 ];

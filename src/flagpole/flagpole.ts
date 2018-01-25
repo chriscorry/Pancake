@@ -43,6 +43,7 @@ interface _ApiInfo {
 interface _PathInfo {
   requestType: string,
   path:        string,
+  event:       string,
   handler:     Function,
   route:       string
 }
@@ -62,7 +63,6 @@ export class Flagpole
   // Member data
   private _envName: string;
   private _apiSearchDirs: string[] = [];
-  private _requestTypes            = new Map<string, Function>();
   private _registeredAPIsByToken   = new Map<string, _ApiInfo>();
   private _pendingWSClients        = new Set<any>();
 
@@ -492,9 +492,13 @@ export class Flagpole
     log.trace('FP: Websocket connect.');
 
     // Register our interest in negotiation events
-    socket.on(EVT_NEGOTIATE, (payload:any) => {
+    socket.on(EVT_NEGOTIATE, (payload:any, ack:Function) : any => {
       payload.socket = socket;
-      return this._onNegotiate(payload);
+      let resp = this._onNegotiate(payload);
+      if (resp) {
+        ack(resp)
+      }
+      return resp;
     });
     return;
   }
@@ -508,17 +512,62 @@ export class Flagpole
   }
 
 
-  private _onNegotiate(payload: any) : PancakeError
+  private _onNegotiate(payload: any) : any
   {
     let socket = payload.socket;
 
     if (this._pendingWSClients.has(socket)) {
 
+      // Build the API token
       let name = payload.name;
       let ver = payload.ver;
+      name = _.toLower(_.trim(name));
+      let apiToken = name + ':' + _.trim(ver);
 
-      log.trace('FP: Websocket negotiate.');
+      // Look up the requested API
+      let apiInfo = this._registeredAPIsByToken.get(apiToken);
+      if (apiInfo) {
+
+        // Loop through the API...
+        apiInfo.apiHandler.flagpoleHandlers.forEach((pathInfo: _PathInfo) => {
+
+          // ...and register the endpoints with this socket
+          let eventName = name + ':' + pathInfo.event;
+          socket.on(eventName, async (payload:any, ack:Function) : Promise<any> => {
+            try {
+              if (!payload) payload = {};
+              payload.socket = socket;
+              let resp = await pathInfo.handler(payload);
+              if (ack) {
+                if (resp.err) {
+                  ack(resp.err);
+                }
+                else if (resp.status || resp.result) {
+                  ack({ status: resp.status, result: resp.result});
+                }
+              }
+              return resp.result;
+            }
+            catch (err) {
+              log.error('FP: Unexpected exception. (SocketIO)', err)
+              return err;
+            }
+          });
+          log.trace(`FP: Registered socket event handler (${eventName}, v${ver})`);
+        });
+
+        // No longer a pending client
+        this._pendingWSClients.delete(socket);
+
+        log.trace('FP: Websocket negotiate success.');
+        log.trace(`FP:   ${name}, v${ver}`);
+        return { _status: 'SUCCESS' };
+      }
+
+      // No dice
+      log.trace('FP: Websocket negotiate failed.');
       log.trace(`FP:   ${name}, v${ver}`);
+      return new PancakeError('ERR_API_NOT_FOUND');
     }
 
     return;

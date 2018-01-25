@@ -93,7 +93,7 @@ export class TransportREST implements Transport
               return next(apiRes.err)
           }
           catch (err) {
-            log.error('FP: Unexpected exception.', err)
+            log.error('FP: Unexpected exception. (REST)', err)
             return next(err);
           }
         });
