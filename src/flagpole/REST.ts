@@ -62,7 +62,7 @@ export class TransportREST implements Transport
   }
 
 
-  // registerAPIInstance(name:string, ver: any, endpointInfo: any) : PancakeError
+  // registerAPIEndpoint(name:string, ver: string, apiToken: string, endpointInfo: any) : PancakeError
   // instanceInfo {
   //   IN requestType = 'get', 'post', 'put', 'patch', etc.
   //   IN path = API URL
@@ -70,7 +70,7 @@ export class TransportREST implements Transport
   //   OUT route
   // }
 
-  registerAPIInstance(name:string, ver: string, endpointInfo: EndpointInfo) : PancakeError
+  registerAPIEndpoint(name:string, ver: string, apiToken:string, endpointInfo: EndpointInfo) : PancakeError
   {
     if (endpointInfo.requestType && endpointInfo.path) {
 
@@ -112,12 +112,12 @@ export class TransportREST implements Transport
   }
 
 
-  // unregisterAPIInstance(name: string, ver: string, endpointInfo: any) : PancakeError
+  // unregisterAPIEndpoint(name: string, ver: string, apiToken: string, endpointInfo: any) : PancakeError
   // instanceInfo {
   //   IN route
   // }
 
-  unregisterAPIInstance(name: string, ver: string, endpointInfo: EndpointInfo) : PancakeError
+  unregisterAPIEndpoint(name: string, ver: string, apiToken: string, endpointInfo: EndpointInfo) : PancakeError
   {
     // Unregister the route
     this._serverRestify.rm(endpointInfo.route);

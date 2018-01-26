@@ -16,6 +16,7 @@ import utils             = require('../util/pancake-utils');
 const  log               = utils.log;
 
 // Transports
+import { Transport }           from './transport';
 import { TransportREST }       from './REST';
 import { TransportSocketIO }   from './websockets';
 
@@ -41,9 +42,6 @@ interface _ApiInfo {
   fileName:        string
 }
 
-//Events
-const EVT_NEGOTIATE = 'negotiate';
-
 
 /****************************************************************************
  **                                                                        **
@@ -57,12 +55,9 @@ export class Flagpole
   private _envName: string;
   private _apiSearchDirs: string[] = [];
   private _registeredAPIsByToken   = new Map<string, _ApiInfo>();
-  private _pendingWSClients        = new Set<any>();
-  private _currentWSClients        = new Set<any>();
 
   // Transports
-  private _transportREST: TransportREST;
-  private _transportSocketIO: TransportSocketIO;
+  private _transports: Transport[] = [];
 
 
   /****************************************************************************
@@ -80,7 +75,7 @@ export class Flagpole
                              config?:         Configuration) : PancakeError // opt
   {
     // Simple validation
-    if (!this._transportREST) {
+    if (!this._transports.length) {
       log.trace('FP: ERR_TRANSPORT_NOT_INIT');
       return new PancakeError('ERR_TRANSPORT_NOT_INIT');
     }
@@ -124,7 +119,9 @@ export class Flagpole
       newAPI.apiHandler.flagpoleHandlers.forEach((endpointInfo: EndpointInfo) => {
 
         // Set it up
-        this._transportREST.registerAPIInstance(name, ver, endpointInfo);
+        for (let transport of this._transports) {
+          transport.registerAPIEndpoint(name, ver, apiToken, endpointInfo);
+        }
       });
     }
     catch (error) {
@@ -160,7 +157,7 @@ export class Flagpole
                                fileName: string) : PancakeError
   {
     // Simple validation
-    if (!this._transportREST) {
+    if (!this._transports.length) {
       log.trace('FP: ERR_TRANSPORT_NOT_INIT');
       return new PancakeError('ERR_TRANSPORT_NOT_INIT');
     }
@@ -220,7 +217,9 @@ export class Flagpole
     apiUnregInfo.apiHandler.flagpoleHandlers.forEach((endpointInfo: EndpointInfo) => {
 
       // Unregister the route
-      this._transportREST.unregisterAPIInstance(apiUnregInfo.name, apiUnregInfo.ver, endpointInfo);
+      for (let transport of this._transports) {
+        transport.unregisterAPIEndpoint(apiUnregInfo.name, apiUnregInfo.ver, apiUnregInfo.apiToken, endpointInfo);
+      }
     });
   }
 
@@ -271,7 +270,7 @@ export class Flagpole
       serverRestify,
       envName: opts.envName
     });
-    this._transportREST = transportREST;
+    this._transports.push(transportREST);
 
     // Initialize our SocketIO transport
     let transportSocketIO = new TransportSocketIO();
@@ -279,10 +278,7 @@ export class Flagpole
       serverSocketIO,
       envName: opts.envName
     });
-    this._transportSocketIO = transportSocketIO;
-
-    // We need to hear aboiut connects and disconnects
-    serverSocketIO.sockets.on('connection', this._onConnect.bind(this));
+    this._transports.push(transportSocketIO);
 
     // API dirs
     if (opts && opts.apiSearchDirs) {
@@ -330,7 +326,7 @@ export class Flagpole
     let found: boolean = false;
 
     // Simple validation
-    if (!this._transportREST) {
+    if (!this._transports.length) {
       log.trace('FP: ERR_TRANSPORT_NOT_INIT');
       return new PancakeError('ERR_TRANSPORT_NOT_INIT');
     }
@@ -389,7 +385,7 @@ export class Flagpole
   loadAPIConfig(configFile: string) : PancakeError
   {
     // Simple validation
-    if (!this._transportREST) {
+    if (!this._transports.length) {
       log.trace('FP: ERR_TRANSPORT_NOT_INIT');
       return new PancakeError('ERR_TRANSPORT_NOT_INIT');
     }
@@ -471,105 +467,6 @@ export class Flagpole
     return apis;
   }
 
-
-  /****************************************************************************
-   **                                                                        **
-   ** Websockets                                                             **
-   **                                                                        **
-   ****************************************************************************/
-
-  _onConnect(socket: any) : PancakeError
-  {
-    this._pendingWSClients.add(socket);
-    log.trace(`FP: Websocket connect. (${socket.id})`);
-
-    // Register our interest in disconnect and negotiation events
-    socket.on('disconnect', (reason: string) : any => {
-      this._onDisconnect(reason, socket);
-    });
-    socket.on(EVT_NEGOTIATE, (payload:any, ack:Function) : any => {
-      payload.socket = socket;
-      let resp = this._onNegotiate(payload);
-      if (resp) {
-        ack(resp)
-      }
-      return resp;
-    });
-    return;
-  }
-
-
-  _onDisconnect(reason: string, socket: any) : void
-  {
-    this._pendingWSClients.delete(socket);
-    this._currentWSClients.delete(socket);
-    log.trace(`FP: Websocket disconnect. (${socket.id})`);
-  }
-
-
-  private _onNegotiate(payload: any) : any
-  {
-    let socket = payload.socket;
-
-    if (this._pendingWSClients.has(socket) || this._currentWSClients.has(socket)) {
-
-      // Build the API token
-      let name = payload.name;
-      let ver = payload.ver;
-      name = _.toLower(_.trim(name));
-      let apiToken = name + ':' + _.trim(ver);
-
-      // Look up the requested API
-      let apiInfo = this._registeredAPIsByToken.get(apiToken);
-      if (apiInfo) {
-
-        // Loop through the API...
-        apiInfo.apiHandler.flagpoleHandlers.forEach((endpointInfo: EndpointInfo) => {
-
-          // ...and register the endpoints with this socket
-          if (endpointInfo.event) {
-            let eventName = name + ':' + endpointInfo.event;
-
-            // Register with wrapper function
-            socket.on(eventName, async (payload:any, ack:Function) : Promise<any> => {
-              try {
-                if (!payload) payload = {};
-                payload.socket = socket;
-                let resp = await endpointInfo.handler(payload);
-                if (ack) {
-                  if (resp.err) {
-                    ack(resp.err);
-                  }
-                  else if (resp.status || resp.result) {
-                    ack({ status: resp.status, result: resp.result});
-                  }
-                }
-                return resp.result;
-              }
-              catch (err) {
-                log.error('FP: Unexpected exception. (SocketIO)', err)
-                return err;
-              }
-            });
-            log.trace(`FP: Registered socket event handler (${eventName}, v${ver})`);
-          }
-        });
-
-        // No longer a pending client
-        this._pendingWSClients.delete(socket);
-        this._currentWSClients.add(socket);
-
-        log.trace(`FP: Websocket negotiate success. ${name}, v${ver}`);
-        return { _status: 'SUCCESS' };
-      }
-
-      // No dice
-      log.trace(`FP: Websocket negotiate failed. ${name}, v${ver}`);
-      return new PancakeError('ERR_API_NOT_FOUND');
-    }
-
-    return;
-  }
 } // END class Flagpole
 
 

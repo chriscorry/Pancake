@@ -1,8 +1,8 @@
 export interface EndpointInfo {
+  handler:      Function,
   requestType?: string,
   path?:        string,
   event?:       string,
-  handler:      Function,
   route?:       string
 }
 
