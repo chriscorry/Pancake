@@ -1,0 +1,10 @@
+apis	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/valet/api/apiconfig.json	/^  "apis": [$/;"	function	line:2
+name	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/valet/api/apiconfig.json	/^      "name": "valet",$/;"	function	line:4
+descriptiveName	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/valet/api/apiconfig.json	/^      "descriptiveName": "Valet Caching API",$/;"	function	line:5
+description	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/valet/api/apiconfig.json	/^      "description": "Used for arbitrary blobs.",$/;"	function	line:6
+versions	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/valet/api/apiconfig.json	/^      "versions": [$/;"	function	line:7
+apis	/Users/Chris/Dropbox/Tech/Projects/Pancake/src/valet/api/apiconfig.json	/^  "apis": [$/;"	function	line:2
+name	/Users/Chris/Dropbox/Tech/Projects/Pancake/src/valet/api/apiconfig.json	/^      "name": "valet",$/;"	function	line:4
+descriptiveName	/Users/Chris/Dropbox/Tech/Projects/Pancake/src/valet/api/apiconfig.json	/^      "descriptiveName": "Valet Caching API",$/;"	function	line:5
+description	/Users/Chris/Dropbox/Tech/Projects/Pancake/src/valet/api/apiconfig.json	/^      "description": "Used for arbitrary blobs.",$/;"	function	line:6
+versions	/Users/Chris/Dropbox/Tech/Projects/Pancake/src/valet/api/apiconfig.json	/^      "versions": [$/;"	function	line:7

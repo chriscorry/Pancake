@@ -6,6 +6,7 @@
 
 // import socketIO       = require('socket.io');
 import _              = require('lodash');
+import semver         = require('semver');
 import { PancakeError }    from '../util/pancake-err';
 import { EndpointInfo,
          EndpointResponse,
@@ -21,6 +22,12 @@ const  log            = utils.log;
  **                                                                        **
  ****************************************************************************/
 
+interface VersionInfo
+{
+  ver: string;
+  endpoints: EndpointInfo[]
+}
+
  //Events
  const EVT_NEGOTIATE = 'negotiate';
 
@@ -35,9 +42,9 @@ export class TransportSocketIO implements Transport
 {
   private _serverSocketIO: any;
   private _envName: string;
-  private _registeredEndpointsByToken = new Map<string, Set<EndpointInfo>>();
-  private _pendingWSClients           = new Set<any>();
-  private _currentWSClients           = new Set<any>();
+  private _registeredEndpoints = new Map<string, VersionInfo[]>();
+  private _pendingWSClients    = new Set<any>();
+  private _currentWSClients    = new Set<any>();
 
 
   // initialize(initInfo: any) : void
@@ -57,7 +64,7 @@ export class TransportSocketIO implements Transport
     }
     if (initInfo.envName) this._envName = initInfo.envName;
 
-    // We need to hear aboiut connects and disconnects
+    // We need to hear about connects
     this._serverSocketIO.sockets.on('connection', this._onConnect.bind(this));
   }
 
@@ -71,14 +78,37 @@ export class TransportSocketIO implements Transport
   {
     // Need to maintain our own collection because we'll be referring to it when
     // websocket clients attempt to negotiate
-    let endpoints = this._registeredEndpointsByToken.get(apiToken);
-    if (!endpoints) {
-      endpoints = new Set<EndpointInfo>();
-      this._registeredEndpointsByToken.set(apiToken, endpoints);
+    let versions: VersionInfo[] = this._registeredEndpoints.get(name);
+    if (!versions) {
+      versions = [];
+      this._registeredEndpoints.set(name, versions);
     }
+    let match = versions.find((verinfo: VersionInfo) => {
+      if (ver === verinfo.ver)
+        return true;
+    });
+    if (!match) {
+      match = { ver, endpoints: [] };
+      versions.push(match);
+    }
+    match.endpoints.push(endpointInfo);
 
-    // Add to the collection
-    endpoints.add(endpointInfo);
+    // Sort in DECENDING order
+    versions.sort((a: VersionInfo, b: VersionInfo) => {
+      if (semver.lt(a.ver, b.ver)) {
+        return 1;
+      }
+      if (semver.gt(a.ver, b.ver)) {
+        return -1;
+      }
+      return 0;
+    });
+
+    /*
+    log.trace(`==== REGISTER API == ${name}, v${ver} ================`);
+    log.trace(JSON.stringify(versions, null, 2));
+    log.trace(`======================================================`);
+    */
 
     return;
   }
@@ -91,17 +121,30 @@ export class TransportSocketIO implements Transport
 
   unregisterAPIEndpoint(name: string, ver: string, apiToken: string, endpointInfo: EndpointInfo) : PancakeError
   {
-    let endpoints = this._registeredEndpointsByToken.get(apiToken);
-    if (endpoints) {
-      endpoints.delete(endpointInfo);
-      if (endpoints.size === 0) {
-        this._registeredEndpointsByToken.delete(apiToken);
+    let versions = this._registeredEndpoints.get(name);
+    if (versions) {
+      let matchIndex = versions.findIndex((verinfo: VersionInfo) => {
+        if (ver === verinfo.ver)
+          return true;
+      });
+      if (matchIndex != -1) {
+        versions.splice(matchIndex, 1);
+      }
+      if (versions.length === 0) {
+        this._registeredEndpoints.delete(name);
       }
     }
     else {
       // Weird -- this should never happen
       log.warn(`FP: WS: Encountered missing API. That's odd.`);
     }
+
+    /*
+    log.trace(`==== UNREGISTER API == ${name}, v${ver} ================`);
+    log.trace(JSON.stringify(versions, null, 2));
+    log.trace(`======================================================`);
+    */
+
     return;
   }
 
@@ -112,7 +155,7 @@ export class TransportSocketIO implements Transport
    **                                                                        **
    ****************************************************************************/
 
-  _onConnect(socket: any) : PancakeError
+  private _onConnect(socket: any) : PancakeError
   {
     this._pendingWSClients.add(socket);
     log.trace(`FP: Websocket connect. (${socket.id})`);
@@ -133,7 +176,7 @@ export class TransportSocketIO implements Transport
   }
 
 
-  _onDisconnect(reason: string, socket: any) : void
+  private _onDisconnect(reason: string, socket: any) : void
   {
     this._pendingWSClients.delete(socket);
     this._currentWSClients.delete(socket);
@@ -147,54 +190,66 @@ export class TransportSocketIO implements Transport
 
     if (this._pendingWSClients.has(socket) || this._currentWSClients.has(socket)) {
 
-      // Build the API token
+
+      // Find a matching versions
       let name = payload.name;
       let ver = payload.ver;
-      name = _.toLower(_.trim(name));
-      let apiToken = name + ':' + _.trim(ver);
+      let versions: VersionInfo[] = this._registeredEndpoints.get(name);
+      if (versions) {
 
-      // Look up the requested API
-      let endpoints = this._registeredEndpointsByToken.get(apiToken);
-      if (endpoints) {
-
-        // Loop through the API...
-        endpoints.forEach((endpointInfo: EndpointInfo) => {
-
-          // ...and register the endpoints with this socket
-          if (endpointInfo.event) {
-            let eventName = name + ':' + endpointInfo.event;
-
-            // Register with wrapper function
-            socket.on(eventName, async (payload:any, ack:Function) : Promise<any> => {
-              try {
-                if (!payload) payload = {};
-                payload.socket = socket;
-                let resp = await endpointInfo.handler(payload);
-                if (ack) {
-                  if (resp.err) {
-                    ack(resp.err);
-                  }
-                  else if (resp.status || resp.result) {
-                    ack({ status: resp.status, result: resp.result});
-                  }
-                }
-                return resp.result;
-              }
-              catch (err) {
-                log.error('FP: Unexpected exception. (SocketIO)', err)
-                return err;
-              }
-            });
-            log.trace(`FP: Registered socket event handler (${eventName}, v${ver})`);
+        // Version search
+        let match = versions.find((verinfo: VersionInfo) => {
+          // log.trace(`VER MATCH CHECK: ${ver} <--> ${verinfo.ver}`);
+          if (semver.satisfies(ver, '^' + verinfo.ver)) {
+            // log.trace('   SATISFIED');
+            return true;
           }
+          // log.trace('   NO MATCH');
         });
 
-        // No longer a pending client
-        this._pendingWSClients.delete(socket);
-        this._currentWSClients.add(socket);
+        // Hook 'em up
+        if (match) {
+          let endpoints = match.endpoints;
 
-        log.trace(`FP: Websocket negotiate success. ${name}, v${ver}`);
-        return { _status: 'SUCCESS' };
+          // Loop through the API...
+          endpoints.forEach((endpointInfo: EndpointInfo) => {
+
+            // ...and register the endpoints with this socket
+            if (endpointInfo.event) {
+              let eventName = name + ':' + endpointInfo.event;
+
+              // Register with wrapper function
+              socket.on(eventName, async (payload:any, ack:Function) : Promise<any> => {
+                try {
+                  if (!payload) payload = {};
+                  payload.socket = socket;
+                  let resp = await endpointInfo.handler(payload);
+                  if (ack) {
+                    if (resp.err) {
+                      ack(resp.err);
+                    }
+                    else if (resp.status || resp.result) {
+                      ack({ status: resp.status, result: resp.result});
+                    }
+                  }
+                  return resp.result;
+                }
+                catch (err) {
+                  log.error('FP: Unexpected exception. (SocketIO)', err)
+                  return err;
+                }
+              });
+              log.trace(`FP: Registered socket event handler (${eventName}, v${ver})`);
+            }
+          });
+
+          // No longer a pending client
+          this._pendingWSClients.delete(socket);
+          this._currentWSClients.add(socket);
+
+          log.trace(`FP: Websocket negotiate success. ${name}, v${ver}`);
+          return { _status: 'SUCCESS' };
+        }
       }
 
       // No dice

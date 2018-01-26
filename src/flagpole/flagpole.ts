@@ -7,6 +7,7 @@
 import path              = require('path');
 import fs                = require('fs');
 import _                 = require('lodash');
+import semver            = require('semver');
 import { PancakeError }    from '../util/pancake-err';
 import { Configuration }   from '../util/pancake-config';
 import { EndpointInfo,
@@ -85,10 +86,11 @@ export class Flagpole
     }
 
     // Validate version format
-    if (!ver.match(/(\d+\.)?(\d+\.)?(\d+)/)) {
+    if (!semver.valid(ver)) {
       log.trace('FP: ERR_BAD_ARG: Invalid version format');
       return new PancakeError('ERR_BAD_ARG', 'Invalid version format');
     }
+    ver = semver.clean(ver);
 
     // Create our new API token
     name = _.toLower(_.trim(name));
