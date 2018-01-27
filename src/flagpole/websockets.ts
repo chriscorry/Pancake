@@ -190,71 +190,101 @@ export class TransportSocketIO implements Transport
 
     if (this._pendingWSClients.has(socket) || this._currentWSClients.has(socket)) {
 
-
-      // Find a matching versions
-      let name = payload.name;
-      let ver = payload.ver;
-      let versions: VersionInfo[] = this._registeredEndpoints.get(name);
-      if (versions) {
-
-        // Version search
-        let match = versions.find((verinfo: VersionInfo) => {
-          // log.trace(`VER MATCH CHECK: ${ver} <--> ${verinfo.ver}`);
-          if (semver.satisfies(ver, '^' + verinfo.ver)) {
-            // log.trace('   SATISFIED');
-            return true;
-          }
-          // log.trace('   NO MATCH');
-        });
-
-        // Hook 'em up
-        if (match) {
-          let endpoints = match.endpoints;
-
-          // Loop through the API...
-          endpoints.forEach((endpointInfo: EndpointInfo) => {
-
-            // ...and register the endpoints with this socket
-            if (endpointInfo.event) {
-              let eventName = name + ':' + endpointInfo.event;
-
-              // Register with wrapper function
-              socket.on(eventName, async (payload:any, ack:Function) : Promise<any> => {
-                try {
-                  if (!payload) payload = {};
-                  payload.socket = socket;
-                  let resp = await endpointInfo.handler(payload);
-                  if (ack) {
-                    if (resp.err) {
-                      ack(resp.err);
-                    }
-                    else if (resp.status || resp.result) {
-                      ack({ status: resp.status, result: resp.result});
-                    }
-                  }
-                  return resp.result;
-                }
-                catch (err) {
-                  log.error('FP: Unexpected exception. (SocketIO)', err)
-                  return err;
-                }
-              });
-              log.trace(`FP: Registered socket event handler (${eventName}, v${ver})`);
-            }
-          });
-
-          // No longer a pending client
-          this._pendingWSClients.delete(socket);
-          this._currentWSClients.add(socket);
-
-          log.trace(`FP: Websocket negotiate success. ${name}, v${ver}`);
-          return { _status: 'SUCCESS' };
-        }
+      // Single object?
+      let apiRequests = payload;
+      if (!Array.isArray(apiRequests)) {
+          apiRequests = [ apiRequests ];
       }
 
-      // No dice
-      log.trace(`FP: Websocket negotiate failed. ${name}, v${ver}`);
-      return new PancakeError('ERR_API_NOT_FOUND');
+      // Process each one in return
+      let returnValues: any[] = [];
+      for (let apiRequest of apiRequests) {
+
+        // Setup
+        let status: string;
+        let reason: string;
+
+        // Find a matching versions
+        let name = apiRequest.name;
+        let ver = apiRequest.ver;
+        let versions: VersionInfo[] = this._registeredEndpoints.get(name);
+        if (versions) {
+
+          // Version search
+          let match = versions.find((verinfo: VersionInfo) => {
+            // log.trace(`VER MATCH CHECK: ${ver} <--> ${verinfo.ver}`);
+            if (semver.satisfies(ver, '^' + verinfo.ver)) {
+              // log.trace('   SATISFIED');
+              return true;
+            }
+            // log.trace('   NO MATCH');
+          });
+
+          // Hook 'em up
+          if (match) {
+            let endpoints = match.endpoints;
+
+            // Loop through the API...
+            endpoints.forEach((endpointInfo: EndpointInfo) => {
+
+              // ...and register the endpoints with this socket
+              if (endpointInfo.event) {
+                let eventName = name + ':' + endpointInfo.event;
+
+                // Unregister, just to avoid dups
+                socket.removeAllListeners(eventName);
+
+                // Register with wrapper function
+                socket.on(eventName, async (payload:any, ack:Function) : Promise<any> => {
+                  try {
+                    if (!payload) payload = {};
+                    payload.socket = socket;
+                    let resp = await endpointInfo.handler(payload);
+                    if (ack) {
+                      if (resp.err) {
+                        ack(resp.err);
+                      }
+                      else if (resp.status || resp.result) {
+                        ack({ status: resp.status, result: resp.result});
+                      }
+                    }
+                    return resp.result;
+                  }
+                  catch (err) {
+                    log.error('FP: Unexpected exception. (SocketIO)', err)
+                    return err;
+                  }
+                });
+                // END wrapper Function
+
+                log.trace(`FP: Registered socket event handler (${eventName}, v${ver})`);
+              }
+            });
+
+            // No longer a pending client
+            this._pendingWSClients.delete(socket);
+            this._currentWSClients.add(socket);
+
+            status = 'SUCCESS';
+            reason = `Websocket negotiate success. ${name}, v${ver}`;
+          }
+          else {
+            status = 'ERR_VER_MATCH_NOT_FOUND';
+            reason = `Websocket negotiate failed. ${name}, v${ver}`;
+          }
+        }
+        else {
+          status = 'ERR_API_NOT_FOUND';
+          reason = `Websocket negotiate failed. ${name}, v${ver}`;
+        }
+
+        // Remember what happened
+        returnValues.push({ status, reason, name, ver });
+        log.trace('FP: ' + reason);
+      }
+
+      // All good
+      return returnValues;
     }
 
     return;
