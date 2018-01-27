@@ -8,7 +8,8 @@ const  cache                  = require('../../cache');
 const  { SimpleMongoFactory } = require('./SimpleMongoFactory');
 import { grab }              from '../../../util/pancake-grab';
 import { Configuration }     from '../../../util/pancake-config';
-import { IEndpointResponse } from '../../../flagpole/apitypes';
+import { IEndpointInfo,
+         IEndpointResponse } from '../../../flagpole/apitypes';
 
 
 /****************************************************************************
@@ -166,7 +167,7 @@ async function load10(payload: any) : Promise<IEndpointResponse>
  **                                                                        **
  ****************************************************************************/
 
-export let flagpoleHandlers = [
+export let flagpoleHandlers: IEndpointInfo[] = [
   { requestType: 'post',  path: '/cache/item',    event: 'item',   handler: getItem },
   { requestType: 'post',  path: '/cache/items',   event: 'items',  handler: getItemMultiple },
   { requestType: 'post',  path: '/cache/set',     event: 'set',    handler: setItem },

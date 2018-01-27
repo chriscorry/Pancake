@@ -9,7 +9,8 @@ import * as util    from '../../util/pancake-utils';
 import { grab }     from '../../util/pancake-grab';
 import { flagpole } from '../../flagpole/flagpole';
 const log = util.log;
-import { IEndpointResponse } from '../../flagpole/apitypes';
+import { IEndpointInfo,
+         IEndpointResponse } from '../../flagpole/apitypes';
 
 
 /****************************************************************************
@@ -211,7 +212,7 @@ function _getStats(payload: any) : IEndpointResponse
 }
 
 
-export let flagpoleHandlers = [
+export let flagpoleHandlers: IEndpointInfo[] = [
   { requestType: 'post',  path: '/management/logbookmark',    event: 'logBookmark',    handler: _logBookmark },
   { requestType: 'post',  path: '/management/setloglevel',    event: 'setLogLevel',    handler: _setLogLevel },
   { requestType: 'patch', path: '/management/reloadapis',     event: 'reloadAPIs',     handler: _reloadAPIConfig },
