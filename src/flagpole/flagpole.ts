@@ -10,14 +10,14 @@ import _                 = require('lodash');
 import semver            = require('semver');
 import { PancakeError }    from '../util/pancake-err';
 import { Configuration }   from '../util/pancake-config';
-import { EndpointInfo,
-         EndpointResponse,
+import { IEndpointInfo,
+         IEndpointResponse,
          EndpointHandler } from './apitypes';
 import utils             = require('../util/pancake-utils');
 const  log               = utils.log;
 
 // Transports
-import { Transport }           from './transport';
+import { ITransport }          from './transport';
 import { TransportREST }       from './REST';
 import { TransportSocketIO }   from './websockets';
 
@@ -28,12 +28,12 @@ import { TransportSocketIO }   from './websockets';
  **                                                                        **
  ****************************************************************************/
 
-export interface FlagpoleOpts {
+export interface IFlagpoleOpts {
   envName?:       string,
   apiSearchDirs?: string
 }
 
-interface _ApiInfo {
+interface _IApiInfo {
   name:            string,
   descriptiveName: string,
   description:     string,
@@ -55,10 +55,10 @@ export class Flagpole
   // Member data
   private _envName: string;
   private _apiSearchDirs: string[] = [];
-  private _registeredAPIsByToken   = new Map<string, _ApiInfo>();
+  private _registeredAPIsByToken   = new Map<string, _IApiInfo>();
 
   // Transports
-  private _transports: Transport[] = [];
+  private _transports: ITransport[] = [];
 
 
   /****************************************************************************
@@ -104,7 +104,7 @@ export class Flagpole
       log.trace('FP: Overwriting api %s', apiToken);
     }
 
-    let newAPI: _ApiInfo = {
+    let newAPI: _IApiInfo = {
       name,
       descriptiveName,
       description,
@@ -113,12 +113,12 @@ export class Flagpole
       apiToken,
       fileName
     };
-    let endpointInfo: EndpointInfo;
+    let endpointInfo: IEndpointInfo;
 
     try {
       // Register the routes
       // newApi.apiHandler.flagpoleHandlers is an array of EndpointInfos
-      newAPI.apiHandler.flagpoleHandlers.forEach((endpointInfo: EndpointInfo) => {
+      newAPI.apiHandler.flagpoleHandlers.forEach((endpointInfo: IEndpointInfo) => {
 
         // Set it up
         for (let transport of this._transports) {
@@ -142,6 +142,11 @@ export class Flagpole
     if (newAPI.apiHandler.initializeAPI) {
       log.trace(`FP: Calling API initializer`);
       newAPI.apiHandler.initializeAPI(config, name, ver, apiToken);
+    }
+    for (let transport of this._transports) {
+      if (transport.registerAPI) {
+        transport.registerAPI(newAPI.apiHandler);
+      }
     }
   }
 
@@ -213,10 +218,10 @@ export class Flagpole
    **                                                                        **
    ****************************************************************************/
 
-  private _unregisterAPIInfo(apiUnregInfo: _ApiInfo) : void
+  private _unregisterAPIInfo(apiUnregInfo: _IApiInfo) : void
   {
     // Iterate over each route and remove
-    apiUnregInfo.apiHandler.flagpoleHandlers.forEach((endpointInfo: EndpointInfo) => {
+    apiUnregInfo.apiHandler.flagpoleHandlers.forEach((endpointInfo: IEndpointInfo) => {
 
       // Unregister the route
       for (let transport of this._transports) {
@@ -234,21 +239,28 @@ export class Flagpole
 
   private _unregisterAllAPIs() : void
   {
-    this._registeredAPIsByToken.forEach((apiInfo: _ApiInfo) => {
+    this._registeredAPIsByToken.forEach((apiInfo: _IApiInfo) => {
 
       // Remove routes
       this._unregisterAPIInfo(apiInfo);
+
+      // Let the transports know
+      for (let transport of this._transports) {
+        if (transport.unregisterAPI) {
+          transport.unregisterAPI(apiInfo.apiHandler);
+        }
+      }
+
+      // Let the API know
+      if (apiInfo.apiHandler.terminateAPI) {
+        log.trace(`FP: Calling API terminator`);
+        apiInfo.apiHandler.terminateAPI();
+      }
 
       // Unload modules from the cache
       if (apiInfo.fileName) {
         delete require.cache[require.resolve(apiInfo.fileName)];
         log.trace(`FP: Removed module (${apiInfo.fileName}) from Node cache.`);
-      }
-
-      // Let the API know
-      if (apiInfo.apiHandler.terminate) {
-        log.trace(`FP: Calling API terminator`);
-        apiInfo.apiHandler.terminate();
       }
     });
 
@@ -264,7 +276,7 @@ export class Flagpole
    **                                                                        **
    ****************************************************************************/
 
-  initialize(serverRestify: any, serverSocketIO: any, opts: FlagpoleOpts) : void
+  initialize(serverRestify: any, serverSocketIO: any, opts: IFlagpoleOpts) : void
   {
     // Initialize our REST transport
     let transportREST = new TransportREST();
@@ -340,7 +352,7 @@ export class Flagpole
     }
 
     // Move through the map and process each item
-    this._registeredAPIsByToken = utils.filterMap(this._registeredAPIsByToken, (apiToken: string, apiInfo: _ApiInfo) => {
+    this._registeredAPIsByToken = utils.filterMap(this._registeredAPIsByToken, (apiToken: string, apiInfo: _IApiInfo) => {
 
       // If a version was specified, nameOrToken is a name and only the
       // specified version should be removed
@@ -353,12 +365,28 @@ export class Flagpole
           // remove ALL versions of this API, including this one
           (!ver && apiInfo.name === nameOrToken)) {
 
-        // Out with the routes, remove from the cache, and keep out of map
+        // Out with the routes
         this._unregisterAPIInfo(apiInfo);
+
+        // Let the transports know
+        for (let transport of this._transports) {
+          if (transport.unregisterAPI) {
+            transport.unregisterAPI(apiInfo.apiHandler);
+          }
+        }
+
+        // Let the API know
+        if (apiInfo.apiHandler.terminateAPI) {
+          log.trace(`FP: Calling API terminator`);
+          apiInfo.apiHandler.terminateAPI();
+        }
+
+        // Unload modules from the cache
         if (apiInfo.fileName) {
           delete require.cache[require.resolve(apiInfo.fileName)];
           log.trace(`FP: Removed module (${apiInfo.fileName}) from Node cache.`);
         }
+
         found = true;
         return false;
       }
@@ -454,7 +482,7 @@ export class Flagpole
   {
     let apis: object[] = [];
 
-    this._registeredAPIsByToken.forEach((newAPI: _ApiInfo) => {
+    this._registeredAPIsByToken.forEach((newAPI: _IApiInfo) => {
       apis.push(_.pick(newAPI, [
         'name',
         'descriptiveName',

@@ -6,9 +6,9 @@
 
 const  cache                  = require('../../cache');
 const  { SimpleMongoFactory } = require('./SimpleMongoFactory');
-import { grab }             from '../../../util/pancake-grab';
-import { Configuration }    from '../../../util/pancake-config';
-import { EndpointResponse } from '../../../flagpole/apitypes';
+import { grab }              from '../../../util/pancake-grab';
+import { Configuration }     from '../../../util/pancake-config';
+import { IEndpointResponse } from '../../../flagpole/apitypes';
 
 
 /****************************************************************************
@@ -68,7 +68,7 @@ export function initializeAPI(config?: Configuration) : void
 }
 
 
-async function getItem(payload: any) : Promise<EndpointResponse>
+async function getItem(payload: any) : Promise<IEndpointResponse>
 {
   let item: any, status: number, result: any;
   [result, item] = await grab(cache.get(payload.id, payload.className, payload.opts));
@@ -82,7 +82,7 @@ async function getItem(payload: any) : Promise<EndpointResponse>
 }
 
 
-async function getItemMultiple(payload: any) : Promise<EndpointResponse>
+async function getItemMultiple(payload: any) : Promise<IEndpointResponse>
 {
   let items: any, status: number, result: any;
   [result, items] = await grab(cache.getMultiple(payload.idInfos));
@@ -96,7 +96,7 @@ async function getItemMultiple(payload: any) : Promise<EndpointResponse>
 }
 
 
-async function setItem(payload: any) : Promise<EndpointResponse>
+async function setItem(payload: any) : Promise<IEndpointResponse>
 {
   let item: any, status: number, result: any;
   [result, item] = await grab(cache.set(payload.id, payload.obj, payload.className, payload.opts));
@@ -110,7 +110,7 @@ async function setItem(payload: any) : Promise<EndpointResponse>
 }
 
 
-async function loadItems(payload: any) : Promise<EndpointResponse>
+async function loadItems(payload: any) : Promise<IEndpointResponse>
 {
   let items: any, status: number, result: any;
   [result, items] = await grab(cache.load(payload.query, payload.className, payload.opts));
@@ -124,20 +124,20 @@ async function loadItems(payload: any) : Promise<EndpointResponse>
 }
 
 
-function getStats(payload: any) : EndpointResponse
+function getStats(payload: any) : IEndpointResponse
 {
   return { status: 200, result: cache.getStats() };
 }
 
 
-function dumpCache(payload: any) : EndpointResponse
+function dumpCache(payload: any) : IEndpointResponse
 {
   cache.dumpCache();
   return { status: 200 };
 }
 
 
-async function load10(payload: any) : Promise<EndpointResponse>
+async function load10(payload: any) : Promise<IEndpointResponse>
 {
   let items: any[] = [];
   let status: number, result: any;

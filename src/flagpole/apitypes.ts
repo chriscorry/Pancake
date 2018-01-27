@@ -1,4 +1,8 @@
-export interface EndpointInfo {
+import { Configuration } from '../util/pancake-config';
+import { PancakeError }  from '../util/pancake-err';
+
+
+export interface IEndpointInfo {
   handler:      Function,
   requestType?: string,
   path?:        string,
@@ -6,11 +10,21 @@ export interface EndpointInfo {
   route?:       string
 }
 
-
-export interface EndpointResponse {
+export interface IEndpointResponse {
   status?: number,
   result?: any,
   err?: any
 }
 
-export type EndpointHandler = (payload: any) => EndpointResponse;
+export type EndpointHandler = (payload: any) => IEndpointResponse;
+
+export interface IAPI
+{
+  initializeAPI?(config: Configuration, name: string, ver: string, apiToken:string) : void;
+  terminateAPI?() : void;
+
+  onConnect?(socket: any) : PancakeError;
+  onDisconnect?(socket: any) : PancakeError;
+
+  flagpoleHandlers: IEndpointInfo[];
+}

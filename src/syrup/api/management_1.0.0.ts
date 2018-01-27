@@ -9,7 +9,7 @@ import * as util    from '../../util/pancake-utils';
 import { grab }     from '../../util/pancake-grab';
 import { flagpole } from '../../flagpole/flagpole';
 const log = util.log;
-import { EndpointResponse } from '../../flagpole/apitypes';
+import { IEndpointResponse } from '../../flagpole/apitypes';
 
 
 /****************************************************************************
@@ -32,6 +32,7 @@ let _timerID: NodeJS.Timer;
  ** Management API                                                         **
  **                                                                        **
  ****************************************************************************/
+
 
 function _shutdownServer() : void
 {
@@ -60,7 +61,7 @@ export function initializeAPI(name: string,
 }
 
 
-function _shutdown(payload: any) : EndpointResponse
+function _shutdown(payload: any) : IEndpointResponse
 {
   let countdown: any = payload.hasOwnProperty('countdown') ? payload.countdown : DEFAULT_SHUTDOWN_TIMER;
   if (!util.isNumeric(countdown)) {
@@ -84,7 +85,7 @@ function _shutdown(payload: any) : EndpointResponse
 }
 
 
-function _cancelShutdown(payload: any) : EndpointResponse
+function _cancelShutdown(payload: any) : IEndpointResponse
 {
   let message: string;
   if (_shutdownCountdown > 0)
@@ -101,7 +102,7 @@ function _cancelShutdown(payload: any) : EndpointResponse
 }
 
 
-function _logBookmark(payload: any) : EndpointResponse
+function _logBookmark(payload: any) : IEndpointResponse
 {
   if (payload.seq) {
     log.info(`===== ${payload.seq} ===== ${payload.seq} ===== ${payload.seq} ===== ${payload.seq} ===== ${payload.seq} ====== ${payload.seq} ===== ${payload.seq} ===== ${payload.seq} =====`);
@@ -113,7 +114,7 @@ function _logBookmark(payload: any) : EndpointResponse
 }
 
 
-function _setLogLevel(payload: any) : EndpointResponse
+function _setLogLevel(payload: any) : IEndpointResponse
 {
   let status: number, reason: string;
 
@@ -140,7 +141,7 @@ function _setLogLevel(payload: any) : EndpointResponse
 }
 
 
-function _reloadAPIConfig(payload: any) : EndpointResponse
+function _reloadAPIConfig(payload: any) : IEndpointResponse
 {
   let status: number, reason: string, err: any;
 
@@ -166,7 +167,7 @@ function _reloadAPIConfig(payload: any) : EndpointResponse
 }
 
 
-function _unregisterAPI(payload: any) : EndpointResponse
+function _unregisterAPI(payload: any) : IEndpointResponse
 {
   let status: number, reason: string, name: string, ver: string, err: any;
 
@@ -194,14 +195,14 @@ function _unregisterAPI(payload: any) : EndpointResponse
 }
 
 
-function _getAPIs(payload: any) : EndpointResponse
+function _getAPIs(payload: any) : IEndpointResponse
 {
   log.trace(`MGMT: Returned list of registered APIs.`);
   return { status: 200, result: flagpole.queryAPIs()};
 }
 
 
-function _getStats(payload: any) : EndpointResponse
+function _getStats(payload: any) : IEndpointResponse
 {
   return { status: 200, result: {
     uptime: util.getTimeComponents(Date.now() - _serverStart),

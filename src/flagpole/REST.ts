@@ -6,10 +6,10 @@
 
 import _              = require('lodash');
 import { PancakeError }    from '../util/pancake-err';
-import { EndpointInfo,
-         EndpointResponse,
+import { IEndpointInfo,
+         IEndpointResponse,
          EndpointHandler } from './apitypes';
-import { Transport }       from './transport';
+import { ITransport }      from './transport';
 import utils          = require('../util/pancake-utils');
 const  log            = utils.log;
 
@@ -20,7 +20,7 @@ const  log            = utils.log;
  **                                                                        **
  ****************************************************************************/
 
-export class TransportREST implements Transport
+export class TransportREST implements ITransport
 {
   private _serverRestify: any;
   private _envName: string;
@@ -70,7 +70,7 @@ export class TransportREST implements Transport
   //   OUT route
   // }
 
-  registerAPIEndpoint(name:string, ver: string, apiToken:string, endpointInfo: EndpointInfo) : PancakeError
+  registerAPIEndpoint(name:string, ver: string, apiToken:string, endpointInfo: IEndpointInfo) : PancakeError
   {
     if (endpointInfo.requestType && endpointInfo.path) {
 
@@ -88,7 +88,7 @@ export class TransportREST implements Transport
 
           // Wrapper function
           async (req: any, res: any, next: Function) : Promise<any> => {
-            let apiRes: EndpointResponse;
+            let apiRes: IEndpointResponse;
             try {
                 let payload = this._buildPayload(req);
                 apiRes = await endpointInfo.handler(payload);
@@ -117,7 +117,7 @@ export class TransportREST implements Transport
   //   IN route
   // }
 
-  unregisterAPIEndpoint(name: string, ver: string, apiToken: string, endpointInfo: EndpointInfo) : PancakeError
+  unregisterAPIEndpoint(name: string, ver: string, apiToken: string, endpointInfo: IEndpointInfo) : PancakeError
   {
     // Unregister the route
     this._serverRestify.rm(endpointInfo.route);

@@ -7,11 +7,13 @@
 // import socketIO       = require('socket.io');
 import _              = require('lodash');
 import semver         = require('semver');
+import { EventEmitter }    from 'events';
 import { PancakeError }    from '../util/pancake-err';
-import { EndpointInfo,
-         EndpointResponse,
+import { IAPI,
+         IEndpointInfo,
+         IEndpointResponse,
          EndpointHandler } from './apitypes';
-import { Transport }       from './transport';
+import { ITransport }      from './transport';
 import utils          = require('../util/pancake-utils');
 const  log            = utils.log;
 
@@ -25,7 +27,7 @@ const  log            = utils.log;
 interface VersionInfo
 {
   ver: string;
-  endpoints: EndpointInfo[]
+  endpoints: IEndpointInfo[]
 }
 
  //Events
@@ -38,7 +40,7 @@ interface VersionInfo
  **                                                                        **
  ****************************************************************************/
 
-export class TransportSocketIO implements Transport
+export class TransportSocketIO extends EventEmitter implements ITransport
 {
   private _serverSocketIO: any;
   private _envName: string;
@@ -69,12 +71,38 @@ export class TransportSocketIO implements Transport
   }
 
 
+  registerAPI(regAPI: IAPI) : PancakeError
+  {
+    // Register event handlers, if they exist
+    if (regAPI.onConnect) {
+      this.on('connect', regAPI.onConnect);
+    }
+    if (regAPI.onDisconnect) {
+      this.on('disconnect', regAPI.onDisconnect);
+    }
+    return;
+  }
+
+
+  unregisterAPI(unregAPI: IAPI) : PancakeError
+  {
+    // Unregister event handlers, if they exist
+    if (unregAPI.onConnect) {
+      this.removeListener('connect', unregAPI.onConnect);
+    }
+    if (unregAPI.onDisconnect) {
+      this.removeListener('disconnect', unregAPI.onConnect);
+    }
+    return;
+  }
+
+
   // registerAPIEndpoint(name:string, ver: string, apiToken: string, endpointInfo: any) : PancakeError
   // instanceInfo {
   //   IN eventName
   // }
 
-  registerAPIEndpoint(name:string, ver: string, apiToken: string, endpointInfo: EndpointInfo) : PancakeError
+  registerAPIEndpoint(name:string, ver: string, apiToken: string, endpointInfo: IEndpointInfo) : PancakeError
   {
     // Need to maintain our own collection because we'll be referring to it when
     // websocket clients attempt to negotiate
@@ -119,7 +147,7 @@ export class TransportSocketIO implements Transport
   //   IN eventName
   // }
 
-  unregisterAPIEndpoint(name: string, ver: string, apiToken: string, endpointInfo: EndpointInfo) : PancakeError
+  unregisterAPIEndpoint(name: string, ver: string, apiToken: string, endpointInfo: IEndpointInfo) : PancakeError
   {
     let versions = this._registeredEndpoints.get(name);
     if (versions) {
@@ -172,6 +200,9 @@ export class TransportSocketIO implements Transport
       }
       return resp;
     });
+
+    // Let anyone else know who cares
+    this.emit('connect', socket);
     return;
   }
 
@@ -181,6 +212,9 @@ export class TransportSocketIO implements Transport
     this._pendingWSClients.delete(socket);
     this._currentWSClients.delete(socket);
     log.trace(`FP: Websocket disconnect. (${socket.id})`);
+
+    // Let anyone else know who cares
+    this.emit('disconnect', socket);
   }
 
 
@@ -225,7 +259,7 @@ export class TransportSocketIO implements Transport
             let endpoints = match.endpoints;
 
             // Loop through the API...
-            endpoints.forEach((endpointInfo: EndpointInfo) => {
+            endpoints.forEach((endpointInfo: IEndpointInfo) => {
 
               // ...and register the endpoints with this socket
               if (endpointInfo.event) {

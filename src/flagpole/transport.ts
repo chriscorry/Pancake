@@ -1,11 +1,12 @@
-import { PancakeError } from '../util/pancake-err';
-import { EndpointInfo } from './apitypes';
+import { PancakeError }  from '../util/pancake-err';
+import { IAPI,
+         IEndpointInfo } from './apitypes';
 
-export interface Transport
+export interface ITransport
 {
   initialize?(initInfo: any) : void;
-  registerAPIEndpoint(name:string, ver: string, apiToken: string, endpointInfo: EndpointInfo) : PancakeError;
-  unregisterAPIEndpoint(name: string, ver: string, apiToken: string, endpointInfo: EndpointInfo) : PancakeError;
-  onConnect?(socket: any) : PancakeError;
-  onDisconnect?(socket: any) : PancakeError;
+  registerAPI?(regAPI: IAPI) : PancakeError;
+  unregisterAPI?(unregAPI: IAPI) : PancakeError;
+  registerAPIEndpoint(name:string, ver: string, apiToken: string, endpointInfo: IEndpointInfo) : PancakeError;
+  unregisterAPIEndpoint(name: string, ver: string, apiToken: string, endpointInfo: IEndpointInfo) : PancakeError;
 }
