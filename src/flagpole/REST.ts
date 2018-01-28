@@ -92,7 +92,9 @@ export class TransportREST implements ITransport
             try {
                 let payload = this._buildPayload(req);
                 apiRes = await endpointInfo.handler(payload);
-                res.send(apiRes.status, apiRes.result);
+                if (!apiRes.err) {
+                  res.send(apiRes.status, apiRes.result);
+                }
                 return next(apiRes.err)
             }
             catch (err) {
