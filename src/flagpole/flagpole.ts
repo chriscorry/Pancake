@@ -480,21 +480,28 @@ export class Flagpole
 
   queryAPIs() : object[]
   {
-    let apis: object[] = [];
+    let apis: Map<string, any> = new Map<string, any>();
+    let returnItems: any[] = [];
 
+    // TRANSFORM #1
+    // Copy into intermmediate data structure
     this._registeredAPIsByToken.forEach((newAPI: _IApiInfo) => {
-      apis.push(_.pick(newAPI, [
-        'name',
-        'descriptiveName',
-        'description',
-        'ver',
-        'apiToken',
-        'fileName'
-      ]));
+      let api = apis.get(newAPI.name);
+      if (!api) {
+        api = { name: newAPI.name, description: newAPI.description, versions: [] };
+        apis.set(api.name, api);
+      }
+      api.versions.push(newAPI.ver);
+    });
+
+    // TRANSFORM #2
+    // Now feed into the return array
+    apis.forEach((api: any) => {
+      returnItems.push(api);
     });
 
     log.trace(`FP: Returned list of APIs.`);
-    return apis;
+    return returnItems;
   }
 
 } // END class Flagpole
