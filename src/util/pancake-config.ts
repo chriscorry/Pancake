@@ -66,6 +66,10 @@ export class Configuration
 
   get(itemName: string)
   {
-    return this._configItems.get(itemName);
+    let item = this._configItems.get(itemName);
+    if (!item) {
+      item = process.env[itemName];
+    }
+    return item;
   }
 }

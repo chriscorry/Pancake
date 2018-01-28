@@ -4,14 +4,16 @@
  **                                                                        **
  ****************************************************************************/
 
-import path             = require('path');
-import fs               = require('fs');
-import restify          = require('restify');
-import socketIO         = require('socket.io');
+import path              = require('path');
+import fs                from 'fs';
+import restify           = require('restify');
+import socketIO          = require('socket.io');
 
-const { log }           = require('../util/pancake-utils');
-const { Configuration } = require('../util/pancake-config');
-const { flagpole }      = require('../flagpole/flagpole');
+import pitboss           = require('../pitboss/api/pitboss_1.0.0/pitboss_client_1.0.0');
+import { PancakeError }  from '../util/pancake-err';
+import { log }           from '../util/pancake-utils';
+import { Configuration } from '../util/pancake-config';
+import { flagpole }      from '../flagpole/flagpole';
 
 
 /****************************************************************************
@@ -24,9 +26,10 @@ const DEFAULT_SERVER_CONFIG = 'serverconfig.json';
 const DEFAULT_API_CONFIG    = 'apiconfig.json';
 
 export interface SyrupOpts {
-  name?:   string,
-  ver?:    string,
-  apiDir?: string
+  name?:       string,
+  ver?:        string,
+  apiDir?:     string,
+  usePitboss?: boolean
 }
 
 
@@ -37,13 +40,14 @@ export interface SyrupOpts {
  ****************************************************************************/
 
 // This is all there is
-export function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
-                   apiConfigFileName: string = DEFAULT_API_CONFIG,
-                   opts?: SyrupOpts) : void
+export async function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
+                         apiConfigFileName: string = DEFAULT_API_CONFIG,
+                         opts?: SyrupOpts) : Promise<void>
 {
   let syrupOpts         = opts || <SyrupOpts>{};
   let serverName:string = syrupOpts.name || process.env.SYRUP_SERVER_NAME || 'Syrup Test';
   let serverVer: string = syrupOpts.ver  || process.env.SYRUP_SERVER_VER  || '1.0.0';
+  let err: any;
 
 
   /****************************************************************************
@@ -106,19 +110,41 @@ export function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
 
   // First, load our private framework APIs
   log.info(`SYRUP: Loading private framework APIs...`);
-  var err = flagpole.loadAPIConfig('apiconfig_priv.json');
+  err = flagpole.loadAPIConfig('apiconfig_priv.json');
   if (err) {
     log.error(err);
     log.error('Exiting...');
-    process.exit(err);
+    process.exit(1);
   }
 
   // Now load the main APIs
-  let configFile: string = config.get['SYRUP_API_CONFIG_FILE'] || apiConfigFileName;
+  let configFile: string = config.get('SYRUP_API_CONFIG_FILE') || apiConfigFileName;
   log.info(`SYRUP: Loading user APIs...`);
   err = flagpole.loadAPIConfig(configFile);
   if (err) {
     log.warn(`SYRUP: No user API loaded. (${configFile})`);
+  }
+
+
+  /****************************************************************************
+   **                                                                        **
+   ** PITBOSS                                                                **
+   **                                                                        **
+   ****************************************************************************/
+
+  let usePitboss = opts.usePitboss;
+  if (usePitboss === undefined) {
+    usePitboss = config.get('USE_PITBOSS');
+  }
+  if (usePitboss === undefined) {
+    usePitboss = true;
+  }
+  if (true === usePitboss) {
+    log.info(`SYRUP: Registering with Pitboss...`);
+    err = await pitboss.registerWithPitboss(serverName, undefined, port, config);
+    if (err) {
+      log.warn(err);
+    }
   }
 
 

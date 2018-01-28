@@ -478,7 +478,7 @@ export class Flagpole
    **                                                                        **
    ****************************************************************************/
 
-  queryAPIs() : object[]
+  queryAPIs() : any[]
   {
     let apis: Map<string, any> = new Map<string, any>();
     let returnItems: any[] = [];

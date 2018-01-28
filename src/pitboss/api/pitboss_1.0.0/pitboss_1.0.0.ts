@@ -28,8 +28,9 @@ interface IServiceInfo {
 }
 
 interface IServerInfo {
-  name: string,
+  name?: string,
   description?: string,
+  pid?: number,
   uuid: string,
   address: string,
   port: number,
@@ -87,6 +88,7 @@ function _processError(status: string, reason?: string, obj?: any) : PancakeErro
   return _lastError;
 }
 
+
 function _addServiceRegistration(name: string, server: IServerInfo) : void
 {
   let servers: Set<IServerInfo> = _servicesByName.get(name);
@@ -137,6 +139,7 @@ function _buildServerDigest(server: IServerInfo, includeServices: boolean = true
   let returnServer = _.pick(server, [
     'name',
     'description',
+    'pid',
     'uuid',
     'address',
     'port'
@@ -186,6 +189,7 @@ function _registerServer(payload: any) : IEndpointResponse
     name:        payload.name,
     description: payload.description,
     uuid:        uuidv4(),
+    pid:         payload.pid,
     address:     payload.address,
     port:        payload.port,
     socket:      payload.socket,
@@ -194,7 +198,7 @@ function _registerServer(payload: any) : IEndpointResponse
   }
 
   // Quick and dirty validation
-  if (!newServer.name || !utils.isDottedIPv4(newServer.address) ||
+  if (!utils.isDottedIPv4(newServer.address) ||
       !newServer.port || !payload.services) {
     return { status: 400, result: _processError('ERR_BAD_ARG', `Invalid args during server registration.`) };
   }
@@ -269,13 +273,12 @@ function _registerServer(payload: any) : IEndpointResponse
   _clearStalePendingServers();
   if (requireWShandshake) {
     _pendingServers.set(newServer.uuid, newServer);
-  }
-  else {
-    _addServerToRegistry(newServer);
+    return { status: 200, result: { notarySig: newServer.uuid }};
   }
 
-  // Off we go
-  return { status: 200, result: { notarySig: newServer.uuid }};
+  // No handshake required
+  _addServerToRegistry(newServer);
+  return { status: 200, result: 'Server added to Pitboss registry.'};
 }
 
 
@@ -379,16 +382,8 @@ export function getLastError() : PancakeError
 export let flagpoleHandlers: IEndpointInfo[] = [
   { requestType: 'post',  path: '/pitboss/register',    event: 'register',   handler: _registerServer },
   { requestType: 'post',  path: '/pitboss/lookup',      event: 'lookup',     handler: _lookup },
-  {                                                     event: 'notarize',   handler: _onNotarize },
   { requestType: 'post',  path: '/pitboss/server',      event: 'server',     handler: _getServerInfo },
   { requestType: 'get',   path: '/pitboss/servers',     event: 'servers',    handler: _getServerRegistry },
-  { requestType: 'get',   path: '/pitboss/services',    event: 'services',   handler: _getServiceRegistry }
-  /*
-  { requestType: 'post',  path: '/cache/items',   event: 'items',  handler: getItemMultiple },
-  { requestType: 'post',  path: '/cache/set',     event: 'set',    handler: setItem },
-  { requestType: 'post',  path: '/cache/load',    event: 'load',   handler: loadItems },
-  { requestType: 'get',   path: '/cache/stats',   event: 'stats',  handler: getStats },
-  { requestType: 'get',   path: '/cache/dump',    event: 'dump',   handler: dumpCache },
-  { requestType: 'get',   path: '/cache/load10',  event: 'load10', handler: load10 }
-  */
+  { requestType: 'get',   path: '/pitboss/services',    event: 'services',   handler: _getServiceRegistry },
+  {                                                     event: 'notarize',   handler: _onNotarize }
 ];
