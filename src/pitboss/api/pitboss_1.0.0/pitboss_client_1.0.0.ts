@@ -24,8 +24,8 @@ import { flagpole }      from '../../../flagpole/flagpole';
 const URL_HTTP                   = 'http://';
 const URL_HTTPS                  = 'https://';
 const URL_REGISTER_SERVER        = '/pitboss/register';
-const PITBOSS_RECONNECT_INTERVAL = 15; // Every minute
-const PITBOSS_CONNECT_TIMEOUT    = 15; // Every minute
+const PITBOSS_RECONNECT_INTERVAL = 60; // sec
+const PITBOSS_CONNECT_TIMEOUT    = 30; // sec
 
 // Other constants
 const HTTP_REQUEST_HEADER = {
@@ -37,7 +37,6 @@ let _pitbossServer: string;
 let _pitbossPort: number;
 let _pitbossBaseURL: string;
 let _pitbossSocket: any;
-let _useNotary: boolean = false;
 let _reconnectInterval = PITBOSS_RECONNECT_INTERVAL;
 let _timerID: NodeJS.Timer;
 
@@ -73,10 +72,7 @@ function _reconnect()
   log.info('PITBOSS: Trying to establish connection with our Pitboss.');
 
   // Give it a shot
-  if (true === _useNotary)
-    _registerUsingNotary(_server, _pitbossBaseURL, false);
-  else
-    _registerWithoutNotary(_server, _pitbossBaseURL, false);
+  _registerWithoutNotary(_server, _pitbossBaseURL, false);
 }
 
 
@@ -118,82 +114,6 @@ function _postRegistration(socket: any) : void
   // Make sure we receive important notifications
   _pitbossSocket.on('disconnect', _onDisconnect);
   _pitbossSocket.on('heartbeat',  _onHeartbeat);
-}
-
-
-export async function _registerUsingNotary(server: any, pitbossBaseURL: string, logErrors: boolean) : Promise<void>
-{
-  let socket: any;
-
-  // Kick it all off
-  try {
-
-    // First, register with the server and extract our notary signature
-    let resp = await axios.post(pitbossBaseURL + URL_REGISTER_SERVER, server, HTTP_REQUEST_HEADER);
-    if (resp.status != 200) {
-      if (true === logErrors) {
-        log.trace(new PancakeError('ERR_PITBOSS_REGISTER', 'PITBOSS: Pitboss registration failed.', resp.data.result));
-      }
-      _initiateReconnects();
-      return;
-    }
-    let notarySig = resp.data.notarySig;
-    log.trace(`SYRUP: Pitboss notary sig received (${notarySig})`);
-
-    // Make our websocket connect
-    socket = await socketIOClient(pitbossBaseURL + '/');
-    if (!socket) {
-      if (true === logErrors) {
-        log.trace(new PancakeError('ERR_PITBOSS_CONNECT', `PITBOSS: Could not connect to Pitboss server ${pitbossBaseURL}`));
-      }
-      _initiateReconnects();
-      return;
-    }
-
-    // Get access to the Pitboss API
-    socket.emit('negotiate', { name: 'pitboss', ver: '1.0.0' }, (negotiateResp: any) => {
-
-      // Everything okay?
-      if (negotiateResp[0].status === 'SUCCESS') {
-
-        // Send off the notarization request
-        socket.emit('pitboss:notarize', { notarySig }, (notarizeResp: any) => {
-
-          // Everything okay?
-          if (200 === notarizeResp.status) {
-            log.info('PITBOSS: Server successfully registered with Pitboss.');
-            _postRegistration(socket);
-          }
-          else {
-            socket.close();
-            socket = undefined;
-            if (true === logErrors) {
-              log.trace(new PancakeError('ERR_PITBOSS_REGISTER', 'PITBOSS: Pitboss registration failed.', notarizeResp));
-            }
-            _initiateReconnects();
-          }
-        });
-      }
-      else {
-        socket.close();
-        socket = undefined;
-        if (true === logErrors) {
-          log.trace(new PancakeError('ERR_PITBOSS_REGISTER', 'PITBOSS: Pitboss registration failed.', negotiateResp));
-        }
-        _initiateReconnects();
-      }
-    });
-
-  } catch (error) {
-    if (socket) {
-      socket.close();
-      socket = undefined;
-    }
-    if (true === logErrors) {
-      log.trace(new PancakeError('ERR_PITBOSS_REGISTER', 'PITBOSS: Pitboss registration failed.', error));
-    }
-    _initiateReconnects();
-  }
 }
 
 
@@ -286,7 +206,7 @@ export function _registerWithoutNotary(server: any, pitbossBaseURL: string, logE
  ****************************************************************************/
 
 export function registerWithPitboss(name: string, description: string, port: number,
-                                    config: Configuration, useNotary: boolean = false, logErrors = true) : void
+                                    config: Configuration, logErrors = true) : void
 {
   // If we're already connected to a Pitboss, break it off
   if (_pitbossSocket) {
@@ -298,7 +218,6 @@ export function registerWithPitboss(name: string, description: string, port: num
   }
 
   // Extract our config values
-  _useNotary = useNotary;
   _pitbossServer = config.get('PITBOSS_SERVER');
   _pitbossPort = config.get('PITBOSS_PORT');
   if (!_pitbossServer || !_pitbossPort) {
@@ -320,8 +239,6 @@ export function registerWithPitboss(name: string, description: string, port: num
     services
   }
 
-  if (true === _useNotary)
-    _registerUsingNotary(_server, _pitbossBaseURL, logErrors);
-  else
-    _registerWithoutNotary(_server, _pitbossBaseURL, logErrors);
+  // Do the real deal
+  _registerWithoutNotary(_server, _pitbossBaseURL, logErrors);
 }

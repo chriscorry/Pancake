@@ -142,8 +142,7 @@ export async function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
   }
   if (true === usePitboss) {
     log.info(`SYRUP: Registering with Pitboss...`);
-    let useNotary = (opts && opts.useNotary != undefined) ? opts.useNotary : false;
-    pitboss.registerWithPitboss(serverName, undefined, port, config, useNotary);
+    pitboss.registerWithPitboss(serverName, undefined, port, config);
   }
 
 
