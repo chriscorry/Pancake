@@ -8,11 +8,6 @@ name	/Users/Chris/Dropbox/Tech/Projects/Pancake/src/pitboss/api/apiconfig.json	/
 descriptiveName	/Users/Chris/Dropbox/Tech/Projects/Pancake/src/pitboss/api/apiconfig.json	/^      "descriptiveName": "Pitboss Server and API Broker",$/;"	function	line:5
 description	/Users/Chris/Dropbox/Tech/Projects/Pancake/src/pitboss/api/apiconfig.json	/^      "description": "Service clearinghouse and matchmaker.",$/;"	function	line:6
 versions	/Users/Chris/Dropbox/Tech/Projects/Pancake/src/pitboss/api/apiconfig.json	/^      "versions": [$/;"	function	line:7
-apis	/Users/Chris/Dropbox/Tech/Projects/Pancake/src/valet/api/apiconfig.json	/^  "apis": [$/;"	function	line:2
-name	/Users/Chris/Dropbox/Tech/Projects/Pancake/src/valet/api/apiconfig.json	/^      "name": "valet",$/;"	function	line:4
-descriptiveName	/Users/Chris/Dropbox/Tech/Projects/Pancake/src/valet/api/apiconfig.json	/^      "descriptiveName": "Valet Caching API",$/;"	function	line:5
-description	/Users/Chris/Dropbox/Tech/Projects/Pancake/src/valet/api/apiconfig.json	/^      "description": "Used for arbitrary blobs.",$/;"	function	line:6
-versions	/Users/Chris/Dropbox/Tech/Projects/Pancake/src/valet/api/apiconfig.json	/^      "versions": [$/;"	function	line:7
 global	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^  "global": {$/;"	function	line:2
 JWT_SECRET	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^    "JWT_SECRET": "sjkhdsafk327678324687bjkbbb&^*&^bbdsdkbkdkb",$/;"	function	line:3
 LOG_LEVEL	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^    "LOG_LEVEL": "trace",$/;"	function	line:4
@@ -23,3 +18,48 @@ test	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^  "te
 PORT	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^    "PORT": 3000$/;"	function	line:10
 development	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^  "development": {$/;"	function	line:12
 PORT	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^    "PORT": 3000$/;"	function	line:13
+initializeAPI	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function initializeAPI(config) {$/;"	function	line:30
+initializeAPI	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function initializeAPI(config) {$/;"	function	line:30
+onConnect	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function onConnect(socket) {$/;"	function	line:40
+onConnect	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function onConnect(socket) {$/;"	function	line:40
+onDisconnect	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function onDisconnect(socket) {$/;"	function	line:44
+onDisconnect	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function onDisconnect(socket) {$/;"	function	line:44
+_processError	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _processError(status, reason, obj) {$/;"	function	line:54
+_processError	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _processError(status, reason, obj) {$/;"	function	line:54
+_addServiceRegistration	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _addServiceRegistration(name, server) {$/;"	function	line:61
+_addServiceRegistration	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _addServiceRegistration(name, server) {$/;"	function	line:61
+_removeServerRegistration	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _removeServerRegistration(server) {$/;"	function	line:69
+_removeServerRegistration	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _removeServerRegistration(server) {$/;"	function	line:69
+_doesVersionSatisfy	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _doesVersionSatisfy(checkVer, versions) {$/;"	function	line:83
+_doesVersionSatisfy	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _doesVersionSatisfy(checkVer, versions) {$/;"	function	line:83
+_clearStalePendingServers	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _clearStalePendingServers() {$/;"	function	line:92
+_clearStalePendingServers	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _clearStalePendingServers() {$/;"	function	line:92
+_addServerToRegistry	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _addServerToRegistry(server) {$/;"	function	line:99
+_addServerToRegistry	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _addServerToRegistry(server) {$/;"	function	line:99
+_buildServerDigest	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _buildServerDigest(server, includeServices = true) {$/;"	function	line:108
+_buildServerDigest	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _buildServerDigest(server, includeServices = true) {$/;"	function	line:108
+_performHeartbeat	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _performHeartbeat() {$/;"	function	line:132
+_performHeartbeat	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _performHeartbeat() {$/;"	function	line:132
+_registerServer	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _registerServer(payload) {$/;"	function	line:166
+let.name	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^    let newServer = {$/;"	property	line:182
+_registerServer	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _registerServer(payload) {$/;"	function	line:166
+let.name	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^                let newService = { name: service.name, description: service.description, versions };$/;"	property	line:240
+_lookup	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^\/\/ function _lookup(payload: any) : IEndpointResponse$/;"	function	line:266
+_lookup	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _lookup(payload) {$/;"	function	line:271
+_lookup	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _lookup(payload) {$/;"	function	line:271
+_getServerRegistry	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _getServerRegistry(payload) {$/;"	function	line:274
+_getServerRegistry	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _getServerRegistry(payload) {$/;"	function	line:274
+_getServiceRegistry	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _getServiceRegistry(payload) {$/;"	function	line:282
+_getServiceRegistry	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _getServiceRegistry(payload) {$/;"	function	line:282
+_getServerInfo	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _getServerInfo(payload) {$/;"	function	line:295
+_getServerInfo	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _getServerInfo(payload) {$/;"	function	line:295
+_onNotorize	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^\/\/ function _onNotorize(payload: any) : IEndpointResponse$/;"	function	line:307
+_onNotarize	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _onNotarize(payload) {$/;"	function	line:313
+_onNotarize	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function _onNotarize(payload) {$/;"	function	line:313
+getLastError	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function getLastError() {$/;"	function	line:331
+getLastError	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function getLastError() {$/;"	function	line:331
+apis	/Users/Chris/Dropbox/Tech/Projects/Pancake/src/valet/api/apiconfig.json	/^  "apis": [$/;"	function	line:2
+name	/Users/Chris/Dropbox/Tech/Projects/Pancake/src/valet/api/apiconfig.json	/^      "name": "valet",$/;"	function	line:4
+descriptiveName	/Users/Chris/Dropbox/Tech/Projects/Pancake/src/valet/api/apiconfig.json	/^      "descriptiveName": "Valet Caching API",$/;"	function	line:5
+description	/Users/Chris/Dropbox/Tech/Projects/Pancake/src/valet/api/apiconfig.json	/^      "description": "Passthrough caching service for arbitrary objects.",$/;"	function	line:6
+versions	/Users/Chris/Dropbox/Tech/Projects/Pancake/src/valet/api/apiconfig.json	/^      "versions": [$/;"	function	line:7

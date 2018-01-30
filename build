@@ -1,0 +1,13 @@
+#! /usr/bin/env bash
+echo 'Removing targets from dist directory...'
+find ~/Dropbox/Tech/Projects/Pancake/dist -type f -name '*.js' -exec rm "{}" +
+find ~/Dropbox/Tech/Projects/Pancake/dist -type f -name '*.map' -exec rm "{}" +
+find ~/Dropbox/Tech/Projects/Pancake/dist -type f -name '*.json' -exec rm "{}" +
+echo 'Copying over configuration files...'
+cp -f src/valet/api/apiconfig.json dist/valet/api/apiconfig.json
+cp -f src/valet/api/valet_1.0.0/valet_1.0.0.config.json dist/valet/api/valet_1.0.0/valet_1.0.0.config.json
+cp -f src/pitboss/api/apiconfig.json dist/pitboss/api/apiconfig.json
+cp -f src/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.config.json dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.config.json
+echo 'Building sources...'
+tsc
+echo 'Complete.'

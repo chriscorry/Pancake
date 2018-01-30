@@ -20,17 +20,26 @@ import { flagpole }      from '../../../flagpole/flagpole';
  **                                                                        **
  ****************************************************************************/
 
-let pitbossBaseURL: string;
-
 // URLs
-const URL_HTTP            = 'http://';
-const URL_HTTPS           = 'https://';
-const URL_REGISTER_SERVER = '/pitboss/register';
+const URL_HTTP                   = 'http://';
+const URL_HTTPS                  = 'https://';
+const URL_REGISTER_SERVER        = '/pitboss/register';
+const PITBOSS_RECONNECT_INTERVAL = 15; // Every minute
+const PITBOSS_CONNECT_TIMEOUT    = 15; // Every minute
 
 // Other constants
 const HTTP_REQUEST_HEADER = {
   headers: { 'Content-Type': 'application/json', 'Accept-Version': "1" }
 }
+
+let _server: any;
+let _pitbossServer: string;
+let _pitbossPort: number;
+let _pitbossBaseURL: string;
+let _pitbossSocket: any;
+let _useNotary: boolean = false;
+let _reconnectInterval = PITBOSS_RECONNECT_INTERVAL;
+let _timerID: NodeJS.Timer;
 
 
 /****************************************************************************
@@ -39,31 +48,105 @@ const HTTP_REQUEST_HEADER = {
  **                                                                        **
  ****************************************************************************/
 
+ function _timeoutCallback(callback: Function)
+ {
+   let called = false;
+
+   let _timerID = setTimeout(() => {
+       if (called) return;
+       called = true;
+       callback(new PancakeError('ERR_CALLBACK_TIMEOUT'));
+     },
+     PITBOSS_CONNECT_TIMEOUT*1000);
+
+  return function() {
+    if (called) return;
+    called = true;
+    clearTimeout(_timerID);
+    callback.apply(this, arguments);
+  }
+}
+
+
+function _reconnect()
+{
+  log.info('PITBOSS: Trying to establish connection with our Pitboss.');
+
+  // Give it a shot
+  if (true === _useNotary)
+    _registerUsingNotary(_server, _pitbossBaseURL, false);
+  else
+    _registerWithoutNotary(_server, _pitbossBaseURL, false);
+}
+
+
+function _onDisconnect(socket: any)
+{
+  _initiateReconnects();
+  log.info(`PITBOSS: Lost connection to our Pitboss. Will attempt to reconnect in ${_reconnectInterval} sec.`);
+}
+
+
 function _onHeartbeat(heartbeat: any, ack: Function)
 {
-  log.trace('PITBULL: Received heartbeat request. Responding.');
+  log.trace('PITBOSS: Received heartbeat request. Responding.');
   ack({ status: 'OK', timestamp: Date.now() });
 }
 
 
-async function _registerUsingNotary(server: any, pitbossBaseURL: string) : Promise<void>
+function _initiateReconnects()
 {
+  if (_timerID) {
+    clearTimeout(_timerID);
+  }
+  _pitbossSocket = undefined;
+  _timerID = setTimeout(_reconnect, _reconnectInterval*1000);
+}
+
+
+function _postRegistration(socket: any) : void
+{
+  // Remember this connection
+  _pitbossSocket = socket;
+
+  // Cancel any reconnect attempts
+  if (_timerID) {
+    clearTimeout(_timerID);
+    _timerID = undefined;
+  }
+
+  // Make sure we receive important notifications
+  _pitbossSocket.on('disconnect', _onDisconnect);
+  _pitbossSocket.on('heartbeat',  _onHeartbeat);
+}
+
+
+export async function _registerUsingNotary(server: any, pitbossBaseURL: string, logErrors: boolean) : Promise<void>
+{
+  let socket: any;
+
   // Kick it all off
   try {
 
     // First, register with the server and extract our notary signature
     let resp = await axios.post(pitbossBaseURL + URL_REGISTER_SERVER, server, HTTP_REQUEST_HEADER);
     if (resp.status != 200) {
-      log.trace(new PancakeError('ERR_PITBOSS_REGISTER', 'PITBOSS: Pitboss registration failed.', resp.data.result));
+      if (true === logErrors) {
+        log.trace(new PancakeError('ERR_PITBOSS_REGISTER', 'PITBOSS: Pitboss registration failed.', resp.data.result));
+      }
+      _initiateReconnects();
       return;
     }
     let notarySig = resp.data.notarySig;
     log.trace(`SYRUP: Pitboss notary sig received (${notarySig})`);
 
     // Make our websocket connect
-    let socket = await socketIOClient(pitbossBaseURL + '/');
+    socket = await socketIOClient(pitbossBaseURL + '/');
     if (!socket) {
-      log.trace(new PancakeError('ERR_PITBOSS_CONNECT', `PITBOSS: Could not connect to Pitboss server ${pitbossBaseURL}`));
+      if (true === logErrors) {
+        log.trace(new PancakeError('ERR_PITBOSS_CONNECT', `PITBOSS: Could not connect to Pitboss server ${pitbossBaseURL}`));
+      }
+      _initiateReconnects();
       return;
     }
 
@@ -78,67 +161,120 @@ async function _registerUsingNotary(server: any, pitbossBaseURL: string) : Promi
 
           // Everything okay?
           if (200 === notarizeResp.status) {
-            log.trace('PITBOSS: Server successfully registered with Pitboss.');
-
-            // Make sure we receive heartbeat messages
-            socket.on('heartbeat', _onHeartbeat);
+            log.info('PITBOSS: Server successfully registered with Pitboss.');
+            _postRegistration(socket);
           }
           else {
-            log.trace(new PancakeError('ERR_PITBOSS_REGISTER', 'PITBOSS: Pitboss registration failed.', notarizeResp));
+            socket.close();
+            socket = undefined;
+            if (true === logErrors) {
+              log.trace(new PancakeError('ERR_PITBOSS_REGISTER', 'PITBOSS: Pitboss registration failed.', notarizeResp));
+            }
+            _initiateReconnects();
           }
         });
       }
       else {
-        log.trace(new PancakeError('ERR_PITBOSS_REGISTER', 'PITBOSS: Pitboss registration failed.', negotiateResp));
+        socket.close();
+        socket = undefined;
+        if (true === logErrors) {
+          log.trace(new PancakeError('ERR_PITBOSS_REGISTER', 'PITBOSS: Pitboss registration failed.', negotiateResp));
+        }
+        _initiateReconnects();
       }
     });
 
   } catch (error) {
-    log.trace(new PancakeError('ERR_PITBOSS_REGISTER', 'PITBOSS: Pitboss registration failed.', error));
+    if (socket) {
+      socket.close();
+      socket = undefined;
+    }
+    if (true === logErrors) {
+      log.trace(new PancakeError('ERR_PITBOSS_REGISTER', 'PITBOSS: Pitboss registration failed.', error));
+    }
+    _initiateReconnects();
   }
 }
 
 
-export function _registerWithoutNotary(server: any, pitbossBaseURL: string) : void
+export function _registerWithoutNotary(server: any, pitbossBaseURL: string, logErrors: boolean) : void
 {
+  let socket: any;
+
   // Kick it all off
   try {
 
     // Make our websocket connect
-    let socket = socketIOClient(pitbossBaseURL + '/');
+    socket = socketIOClient(pitbossBaseURL + '/', { reconnection: false });
     if (!socket) {
-      log.trace(new PancakeError('ERR_PITBOSS_CONNECT', `PITBOSS: Could not connect to Pitboss server ${pitbossBaseURL}`));
+      if (true === logErrors) {
+        log.trace(new PancakeError('ERR_PITBOSS_CONNECT', `PITBOSS: Could not connect to Pitboss server ${pitbossBaseURL}`));
+      }
+      _initiateReconnects();
       return;
     }
 
     // Get access to the Pitboss API
-    socket.emit('negotiate', { name: 'pitboss', ver: '1.0.0' }, (negotiateResp: any) => {
+    socket.emit('negotiate', { name: 'pitboss', ver: '1.0.0' }, _timeoutCallback((negotiateResp: any) => {
 
-      // Everything okay?
-      if (negotiateResp[0].status === 'SUCCESS') {
+      // Timeout?
+      if (!(negotiateResp instanceof PancakeError)) {
 
-        // Send off the registration request
-        socket.emit('pitboss:register', server, (registerResp: any) => {
+        // Everything okay?
+        if (negotiateResp[0].status === 'SUCCESS') {
 
-          // Everything okay?
-          if (200 === registerResp.status) {
-            log.trace('PITBOSS: Server successfully registered with Pitboss.');
+          // Send off the registration request
+          socket.emit('pitboss:register', server, _timeoutCallback((registerResp: any) => {
 
-            // Make sure we receive heartbeat messages
-            socket.on('heartbeat', _onHeartbeat);
-          }
-          else {
-            log.trace(new PancakeError('ERR_PITBOSS_REGISTER', 'PITBOSS: Pitboss registration failed.', registerResp));
-          }
-        });
+            // Timeout?
+            if (!(registerResp instanceof PancakeError)) {
+
+              // Everything okay?
+              if (200 === registerResp.status) {
+                log.info('PITBOSS: Server successfully registered with Pitboss.');
+                _postRegistration(socket);
+              }
+              else {
+                socket.close();
+                socket = undefined;
+                if (true === logErrors) {
+                  log.trace(new PancakeError('ERR_PITBOSS_REGISTER', 'PITBOSS: Pitboss registration failed.', registerResp));
+                }
+                _initiateReconnects();
+              }
+            }
+
+            // Callback timeout
+            else {
+              socket.close();
+              socket = undefined;
+              if (true === logErrors) {
+                log.trace('PITBOSS: ERR_PITBOSS_REGISTER_TIMEOUT: Pitboss registration timeout.');
+              }
+              _initiateReconnects();
+            }
+          }));
+        }
       }
+
+      // Callback timeout
       else {
-        log.trace(new PancakeError('ERR_PITBOSS_REGISTER', 'PITBOSS: Pitboss registration failed.', negotiateResp));
+        socket.close();
+        socket = undefined;
+        if (true === logErrors) {
+          log.trace('PITBOSS: ERR_PITBOSS_REGISTER_TIMEOUT: Pitboss registration timeout.');
+        }
+        _initiateReconnects();
       }
-    });
+    }));
 
   } catch (error) {
-    log.trace(new PancakeError('ERR_PITBOSS_REGISTER', 'PITBOSS: Pitboss registration failed.', error));
+    socket.close();
+    socket = undefined;
+    if (true === logErrors) {
+      log.trace(new PancakeError('ERR_PITBOSS_REGISTER', 'PITBOSS: Pitboss registration failed.', error));
+    }
+    _initiateReconnects();
   }
 }
 
@@ -150,19 +286,32 @@ export function _registerWithoutNotary(server: any, pitbossBaseURL: string) : vo
  ****************************************************************************/
 
 export function registerWithPitboss(name: string, description: string, port: number,
-                                    config: Configuration, useNotary: boolean = false) : void
+                                    config: Configuration, useNotary: boolean = false, logErrors = true) : void
 {
-  // Extract our config values
-  let pitbossServer = config.get('PITBOSS_SERVER');
-  let pitbossPort = config.get('PITBOSS_PORT');
-  if (!pitbossServer || !pitbossPort) {
-    log.trace(new PancakeError('ERR_MISSING_CONFIG_INFO', 'PITBOSS: Could not find Pitboss server configuration info.'));
+  // If we're already connected to a Pitboss, break it off
+  if (_pitbossSocket) {
+    _pitbossSocket.removeAllListeners();
+    _pitbossSocket.close();
+    _pitbossServer = undefined;
+    _pitbossBaseURL = '';
+    _server = undefined;
   }
-  pitbossBaseURL = URL_HTTP + pitbossServer + ':' + pitbossPort;
+
+  // Extract our config values
+  _useNotary = useNotary;
+  _pitbossServer = config.get('PITBOSS_SERVER');
+  _pitbossPort = config.get('PITBOSS_PORT');
+  if (!_pitbossServer || !_pitbossPort) {
+    if (true === logErrors) {
+      log.trace(new PancakeError('ERR_MISSING_CONFIG_INFO', 'PITBOSS: Could not find Pitboss server configuration info.'));
+    }
+    return;
+  }
+  _pitbossBaseURL = URL_HTTP + _pitbossServer + ':' + _pitbossPort;
 
   // Build our initial registration request data
   let services = flagpole.queryAPIs();
-  let server = {
+  _server = {
     name,
     description,
     pid: process.pid,
@@ -171,8 +320,8 @@ export function registerWithPitboss(name: string, description: string, port: num
     services
   }
 
-  if (true === useNotary)
-    _registerUsingNotary(server, pitbossBaseURL);
+  if (true === _useNotary)
+    _registerUsingNotary(_server, _pitbossBaseURL, logErrors);
   else
-    _registerWithoutNotary(server, pitbossBaseURL);
+    _registerWithoutNotary(_server, _pitbossBaseURL, logErrors);
 }

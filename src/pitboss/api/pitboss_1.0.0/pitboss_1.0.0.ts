@@ -22,9 +22,9 @@ const  log                 = utils.log;
  ****************************************************************************/
 
 interface IServiceInfo {
-  name: string,
+  name:         string,
   description?: string,
-  versions: string[]
+  versions:     string[]
 }
 
 interface IServerInfo {
@@ -164,7 +164,7 @@ function _addServerToRegistry(server: IServerInfo) : void
 }
 
 
-function _buildServerDigest(server: IServerInfo, includeServices: boolean = true) : any
+function _getServerDigest(server: IServerInfo, includeServices: boolean = true) : any
 {
   let returnServer = _.pick(server, [
     'name',
@@ -191,9 +191,22 @@ function _buildServerDigest(server: IServerInfo, includeServices: boolean = true
 }
 
 
+function _getServiceVersions(server: IServerInfo, serviceName: string) : string[]
+{
+  if (server) {
+    let service = server.services.get(serviceName);
+    if (service) return service.versions;
+  }
+  return [];
+}
+
+
 function _performHeartbeat() : void
 {
   let awolServers: IServerInfo[] = [];
+
+  // Just because it's convenient...
+  _clearStalePendingServers();
 
   // Send out heartbeats to all of our registered servers
   _serversBySocket.forEach((server: IServerInfo, socket: any) => {
@@ -370,7 +383,7 @@ function _getServerRegistry(payload: any) : IEndpointResponse
 {
   let returnItems: any[] = [];
   _serversByUUID.forEach((server: IServerInfo, name: string) => {
-    returnItems.push(_buildServerDigest(server));
+    returnItems.push(_getServerDigest(server));
   })
   log.trace(`PITBOSS: Returned server registry.`);
   return { status: 200, result: returnItems};
@@ -383,7 +396,9 @@ function _getServiceRegistry(payload: any) : IEndpointResponse
   _servicesByName.forEach((servers: Set<IServerInfo>, service: string) => {
     let returnServers: any[] = [];
     servers.forEach((server: IServerInfo) => {
-      returnServers.push(_buildServerDigest(server, false));
+      let digest = _getServerDigest(server, false);
+      digest.versions = _getServiceVersions(server, service);
+      returnServers.push(digest);
     });
     let returnService = { service, servers: returnServers };
     returnItems.push(returnService);
@@ -405,7 +420,7 @@ function _getServerInfo(payload: any) : IEndpointResponse
   }
 
   log.trace(`PITBOSS: Returned server info.`);
-  return { status: 200, result: _buildServerDigest(server)};
+  return { status: 200, result: _getServerDigest(server)};
 }
 
 

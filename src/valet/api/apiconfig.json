@@ -3,7 +3,7 @@
     {
       "name": "valet",
       "descriptiveName": "Valet Caching API",
-      "description": "Used for arbitrary blobs.",
+      "description": "Passthrough caching service for arbitrary objects.",
       "versions": [
         { "ver": "1.0.0", "fileName": "valet_1.0.0/valet_1.0.0.js" }
       ]
