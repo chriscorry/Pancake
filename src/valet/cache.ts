@@ -165,6 +165,7 @@ function _processError(status: string, reason?: string, obj?: any) : PancakeErro
   return _lastError;
 }
 
+
 function _getFactoryInfo(className: string) : _FactoryInfo
 {
   var factoryInfo = _factories.get(className);

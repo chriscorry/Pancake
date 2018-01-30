@@ -32,12 +32,15 @@ export function buildSafeFileName(fileName: string, safeRoot?: string) : string
 }
 
 
-export function isDottedIPv4(addr: string)
+export function isDottedIPv4(addr: string) : boolean
 {
- let match: string[] = addr.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
- return match != null &&
-        parseInt(match[1]) <= 255 && parseInt(match[2]) <= 255 &&
-        parseInt(match[3]) <= 255 && parseInt(match[4]) <= 255;
+  if (addr) {
+    let match: string[] = addr.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+    return match != null &&
+          parseInt(match[1]) <= 255 && parseInt(match[2]) <= 255 &&
+          parseInt(match[3]) <= 255 && parseInt(match[4]) <= 255;
+  }
+  return false;
 }
 
 

@@ -35,7 +35,7 @@ let _timerID: NodeJS.Timer;
  ****************************************************************************/
 
 
-function _shutdownServer() : void
+function _shutdownServerCallback() : void
 {
   _shutdownCountdown--;
 
@@ -44,10 +44,9 @@ function _shutdownServer() : void
     log.warn('MGMT: Server shutting down now.');
     process.exit(0);
   }
-  else {
-    log.warn(`MGMT: Server shutting down in ${_shutdownCountdown} seconds.`);
-    _timerID = setTimeout(_shutdownServer, _shutdownCountdown*1000);
-  }
+
+  log.warn(`MGMT: Server shutting down in ${_shutdownCountdown} seconds.`);
+  _timerID = setTimeout(_shutdownServerCallback, 1000);
 }
 
 
@@ -76,7 +75,7 @@ function _shutdown(payload: any) : IEndpointResponse
   if (_timerID) {
     clearTimeout(_timerID);
   }
-  _timerID = setTimeout(_shutdownServer, 1000);
+  _timerID = setTimeout(_shutdownServerCallback, 1000);
 
   // Let folks know
   let message = `Server shutting down in ${_shutdownCountdown} seconds.`;

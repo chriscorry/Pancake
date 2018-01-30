@@ -28,24 +28,30 @@ interface IServiceInfo {
 }
 
 interface IServerInfo {
-  name?: string,
-  description?: string,
-  pid?: number,
-  uuid: string,
-  address: string,
-  port: number,
-  socket: any,
-  regTime: number,
-  services: Map<string, IServiceInfo>
+  name?:            string,
+  description?:     string,
+  pid?:             number,
+  uuid:             string,
+  address:          string,
+  port:             number,
+  socket:           any,
+  regTime:          number,
+  missedHeartbeats: number,
+  services:         Map<string, IServiceInfo>
 }
 
 type UUID = string;
-const NOTARIZE_TIMEOUT = 10*60; // 10 minutes
+const NOTARIZE_TIMEOUT   = 10*60; // 10 minutes
+const HEARTBEAT_INTERVAL = 60; // 1 minute
+const HEARTBEAT_THRESHOLD = 3; // # allowed missed heartbeats
 
-let _serversByUUID   = new Map<UUID,   IServerInfo>();
-let _serversBySocket = new Map<any,    IServerInfo>();
-let _servicesByName  = new Map<string, Set<IServerInfo>>();
-let _pendingServers  = new Map<UUID,   IServerInfo>();
+let _serversByUUID       = new Map<UUID,   IServerInfo>();
+let _serversBySocket     = new Map<any,    IServerInfo>();
+let _servicesByName      = new Map<string, Set<IServerInfo>>();
+let _pendingServers      = new Map<UUID,   IServerInfo>();
+let _maintenanceInterval = HEARTBEAT_INTERVAL * 1000;
+let _heartbeatThreshold  = HEARTBEAT_THRESHOLD;
+let _timerID: NodeJS.Timer;
 let _lastError: any;
 
 
@@ -55,9 +61,16 @@ let _lastError: any;
  **                                                                        **
  ****************************************************************************/
 
-
 export function initializeAPI(config?: Configuration) : void
 {
+  _maintenanceInterval = (config ? config.get('HEARTBEAT_INTERVAL') : HEARTBEAT_INTERVAL)*1000;
+  _heartbeatThreshold  = config ? config.get('HEARTBEAT_THRESHOLD') : HEARTBEAT_THRESHOLD;
+
+  // Kick off timer
+  if (_timerID) {
+    clearTimeout(_timerID);
+  }
+  _timerID = setTimeout(_performHeartbeat, _maintenanceInterval);
 }
 
 
@@ -69,6 +82,7 @@ export function onConnect(socket: any) : PancakeError
 
 export function onDisconnect(socket: any) : PancakeError
 {
+  _removeServerRegistration(_serversBySocket.get(socket));
   return;
 }
 
@@ -78,7 +92,6 @@ export function onDisconnect(socket: any) : PancakeError
  ** Private functions                                                      **
  **                                                                        **
  ****************************************************************************/
-
 
 function _processError(status: string, reason?: string, obj?: any) : PancakeError
 {
@@ -97,6 +110,23 @@ function _addServiceRegistration(name: string, server: IServerInfo) : void
     _servicesByName.set(name, servers);
   }
   servers.add(server);
+}
+
+
+function _removeServerRegistration(server: IServerInfo) : void
+{
+  if (server) {
+    _serversByUUID.delete(server.uuid);
+    _serversBySocket.delete(server.socket);
+    _pendingServers.delete(server.uuid);
+    _servicesByName = utils.filterMap(_servicesByName, (name: string, servers: Set<IServerInfo>) => {
+      servers.delete(server);
+      if (servers.size != 0) {
+        return true;
+      }
+    });
+    log.trace(`PITBOSS: Server removed from registry (${server.address}, ${server.port})`);
+  }
 }
 
 
@@ -142,7 +172,8 @@ function _buildServerDigest(server: IServerInfo, includeServices: boolean = true
     'pid',
     'uuid',
     'address',
-    'port'
+    'port',
+    'missedHeartbeats'
   ]);
   if (true === includeServices) {
     let returnServices: any = [];
@@ -157,6 +188,45 @@ function _buildServerDigest(server: IServerInfo, includeServices: boolean = true
     returnServer.services = returnServices;
   }
   return returnServer;
+}
+
+
+function _performHeartbeat() : void
+{
+  let awolServers: IServerInfo[] = [];
+
+  // Send out heartbeats to all of our registered servers
+  _serversBySocket.forEach((server: IServerInfo, socket: any) => {
+
+    // Has this server gone AWOL?
+    server.missedHeartbeats++;
+    if (server.missedHeartbeats >= _heartbeatThreshold) {
+
+      // We are considering this a dead server
+      awolServers.push(server);
+    }
+    else {
+
+      // Send off the heartbeat
+      socket.emit('heartbeat', { source: 'pitboss', timestamp: Date.now() }, (heartbeatResp: any) => {
+
+        // Everything OK?
+        if ('OK' === heartbeatResp.status) {
+          server.missedHeartbeats = 0;
+          log.trace(`PITBOSS: Received heartbeat response (${server.address}, ${server.port})`);
+        }
+      });
+    }
+  });
+
+  // Unregister our missing servers
+  for (let server of awolServers) {
+    _removeServerRegistration(server);
+    log.trace(`PITBOSS: Removed AWOL server from registry (${server.address}, ${server.port})`);
+  }
+
+  // Kick off the next one
+  _timerID = setTimeout(_performHeartbeat, _maintenanceInterval);
 }
 
 
@@ -186,15 +256,16 @@ function _registerServer(payload: any) : IEndpointResponse
   */
 
   let newServer: IServerInfo = {
-    name:        payload.name,
-    description: payload.description,
-    uuid:        uuidv4(),
-    pid:         payload.pid,
-    address:     payload.address,
-    port:        payload.port,
-    socket:      payload.socket,
-    regTime:     Date.now(),
-    services:    new Map<string, IServiceInfo>()
+    name:             payload.name,
+    description:      payload.description,
+    uuid:             uuidv4(),
+    pid:              payload.pid,
+    address:          payload.address,
+    port:             payload.port,
+    socket:           payload.socket,
+    regTime:          Date.now(),
+    missedHeartbeats: 0,
+    services:         new Map<string, IServiceInfo>()
   }
 
   // Quick and dirty validation
@@ -278,6 +349,7 @@ function _registerServer(payload: any) : IEndpointResponse
 
   // No handshake required
   _addServerToRegistry(newServer);
+  log.trace(`PITBOSS: Server added to registry (${newServer.address}, ${newServer.port})`);
   return { status: 200, result: 'Server added to Pitboss registry.'};
 }
 
@@ -362,8 +434,8 @@ function _onNotarize(payload: any) : IEndpointResponse
 
   // Make everything right
   _addServerToRegistry(server);
-
- return { status: 200, result: 'Server notarized and added to Pitboss registry.'};
+  log.trace(`PITBOSS: Server added to registry (${server.address}, ${server.port})`);
+  return { status: 200, result: 'Server notarized and added to Pitboss registry.'};
 }
 
 

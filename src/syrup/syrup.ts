@@ -29,7 +29,8 @@ export interface SyrupOpts {
   name?:       string,
   ver?:        string,
   apiDir?:     string,
-  usePitboss?: boolean
+  usePitboss?: boolean,
+  useNotary?:  boolean
 }
 
 
@@ -132,7 +133,7 @@ export async function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
    **                                                                        **
    ****************************************************************************/
 
-  let usePitboss = opts.usePitboss;
+  let usePitboss = opts ? opts.usePitboss : true;
   if (usePitboss === undefined) {
     usePitboss = config.get('USE_PITBOSS');
   }
@@ -141,10 +142,8 @@ export async function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
   }
   if (true === usePitboss) {
     log.info(`SYRUP: Registering with Pitboss...`);
-    err = await pitboss.registerWithPitboss(serverName, undefined, port, config);
-    if (err) {
-      log.warn(err);
-    }
+    let useNotary = (opts && opts.useNotary != undefined) ? opts.useNotary : false;
+    pitboss.registerWithPitboss(serverName, undefined, port, config, useNotary);
   }
 
 

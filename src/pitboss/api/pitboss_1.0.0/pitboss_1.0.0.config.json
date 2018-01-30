@@ -1,0 +1,10 @@
+{
+  "global": {
+    "HEARTBEAT_INTERVAL": 60,
+    "HEARTBEAT_THRESHOLD": 3
+  },
+  "development": {
+  },
+  "test": {
+  }
+}

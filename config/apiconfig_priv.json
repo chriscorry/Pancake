@@ -1,9 +1,9 @@
 {
   "apis": [
     {
-      "name": "FlagpoleMgmt",
-      "descriptiveName": "Flagpole Management API",
-      "description": "Used for configuring the Flagpole service.",
+      "name": "ServerMgmt",
+      "descriptiveName": "Server Management API",
+      "description": "Configure and manage Pancake servers.",
       "versions": [
         { "ver": "1.0.0", "fileName": "management_1.0.0.js" }
       ]
