@@ -100,10 +100,11 @@ function _initiateReconnects()
 }
 
 
-function _postRegistration(socket: any) : void
+function _postRegistration(socket: any, registerResp: any) : void
 {
-  // Remember this connection
+  // Remember save off vitals
   _pitbossSocket = socket;
+  _server.uuid = registerResp.result.uuid;
 
   // Cancel any reconnect attempts
   if (_timerID) {
@@ -152,7 +153,7 @@ export function _registerWithoutNotary(server: any, pitbossBaseURL: string, logE
               // Everything okay?
               if (200 === registerResp.status) {
                 log.info('PITBOSS: Server successfully registered with Pitboss.');
-                _postRegistration(socket);
+                _postRegistration(socket, registerResp);
               }
               else {
                 socket.close();
@@ -208,6 +209,9 @@ export function _registerWithoutNotary(server: any, pitbossBaseURL: string, logE
 export function registerWithPitboss(name: string, description: string, port: number,
                                     config: Configuration, logErrors = true) : void
 {
+  let uuidSave = _server ? _server.uuid : undefined;
+  let baseURLSave = _pitbossBaseURL;
+
   // If we're already connected to a Pitboss, break it off
   if (_pitbossSocket) {
     _pitbossSocket.removeAllListeners();
@@ -227,12 +231,16 @@ export function registerWithPitboss(name: string, description: string, port: num
     return;
   }
   _pitbossBaseURL = URL_HTTP + _pitbossServer + ':' + _pitbossPort;
+  if (_pitbossBaseURL != baseURLSave) {
+    uuidSave = undefined;
+  }
 
   // Build our initial registration request data
   let services = flagpole.queryAPIs();
   _server = {
     name,
     description,
+    uuid: uuidSave,
     pid: process.pid,
     address: ip.address(),
     port,

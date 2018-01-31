@@ -59,16 +59,16 @@ export class Configuration
     }
   }
 
-  get envName()
+  get envName() : string
   {
     return this._envName;
   }
 
-  get(itemName: string)
+  get(itemName: string) : any
   {
-    let item = this._configItems.get(itemName);
+    let item = process.env[itemName];
     if (!item) {
-      item = process.env[itemName];
+      item = this._configItems.get(itemName);
     }
     return item;
   }

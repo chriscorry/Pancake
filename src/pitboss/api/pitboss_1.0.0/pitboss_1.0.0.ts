@@ -70,7 +70,7 @@ export function initializeAPI(config?: Configuration) : void
   if (_timerID) {
     clearTimeout(_timerID);
   }
-  _timerID = setTimeout(_performHeartbeat, _maintenanceInterval);
+  _timerID = setTimeout(_performMaintenance, _maintenanceInterval);
 }
 
 
@@ -113,9 +113,15 @@ function _addServiceRegistration(name: string, server: IServerInfo) : void
 }
 
 
-function _removeServerRegistration(server: IServerInfo) : void
+function _removeServerRegistration(serverOrAddress: any, port?: number, silent: boolean = false) : void
 {
-  if (server) {
+  let removed: boolean = false;
+
+  // Two ways to call
+  // TYPE 1: by server
+  if ('object' === typeof serverOrAddress && !port) {
+    let server = serverOrAddress as IServerInfo;
+
     _serversByUUID.delete(server.uuid);
     _serversBySocket.delete(server.socket);
     _pendingServers.delete(server.uuid);
@@ -125,7 +131,23 @@ function _removeServerRegistration(server: IServerInfo) : void
         return true;
       }
     });
-    log.trace(`PITBOSS: Server removed from registry (${server.address}, ${server.port})`);
+    if (false === silent) {
+      log.trace(`PITBOSS: Server removed from registry (${server.address}, ${server.port})`);
+    }
+  }
+
+  // TYPE 2: by IP address and port
+  else if ('string' === typeof serverOrAddress && port) {
+    let address = serverOrAddress as string;
+    let serverFound: IServerInfo;
+    _serversByUUID.forEach((server: IServerInfo, uuid: string) => {
+        if (server.address === address && server.port === port) {
+          serverFound = server;
+        }
+    });
+    if (serverFound) {
+      _removeServerRegistration(serverFound, undefined, silent);
+    }
   }
 }
 
@@ -201,7 +223,7 @@ function _getServiceVersions(server: IServerInfo, serviceName: string) : string[
 }
 
 
-function _performHeartbeat() : void
+function _performMaintenance() : void
 {
   let awolServers: IServerInfo[] = [];
 
@@ -239,7 +261,7 @@ function _performHeartbeat() : void
   }
 
   // Kick off the next one
-  _timerID = setTimeout(_performHeartbeat, _maintenanceInterval);
+  _timerID = setTimeout(_performMaintenance, _maintenanceInterval);
 }
 
 
@@ -252,26 +274,10 @@ function _performHeartbeat() : void
 
 function _registerServer(payload: any) : IEndpointResponse
 {
-  /* PAYLOAD FORMAT
-    name
-    description
-    address (IP address)
-    socket (undefined, or an active socket if coming from a websocket call)
-    services:
-    [
-      ServiceInfo
-      {
-          name, description
-          [ versions]
-      }
-    ]
-    opts = { websocketRequired: boolean (defaults to true) }
-  */
-
   let newServer: IServerInfo = {
     name:             payload.name,
     description:      payload.description,
-    uuid:             uuidv4(),
+    uuid:             payload.uuid ? payload.uuid : uuidv4(),
     pid:              payload.pid,
     address:          payload.address,
     port:             payload.port,
@@ -361,9 +367,17 @@ function _registerServer(payload: any) : IEndpointResponse
   }
 
   // No handshake required
+  _removeServerRegistration(newServer.address, newServer.port, true);
   _addServerToRegistry(newServer);
   log.trace(`PITBOSS: Server added to registry (${newServer.address}, ${newServer.port})`);
-  return { status: 200, result: 'Server added to Pitboss registry.'};
+  let resp = {
+    status: 200,
+    result: {
+      message: 'Server added to Pitboss registry.',
+      uuid: newServer.uuid
+    }
+  }
+  return resp;
 }
 
 
