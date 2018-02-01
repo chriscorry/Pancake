@@ -12,7 +12,13 @@ import { PancakeError }      from '../../../util/pancake-err';
 import { Configuration }     from '../../../util/pancake-config';
 import { IEndpointInfo,
          IEndpointResponse } from '../../../flagpole/apitypes';
+import { IServerInfo,
+         IServiceInfo,
+         IBalanceStrategy }  from './pitboss_types';
 const  log                 = utils.log;
+
+// Load-balancing strategies
+import { RoundRobinStrategy } from './strat_roundrobin';
 
 
 /****************************************************************************
@@ -21,36 +27,19 @@ const  log                 = utils.log;
  **                                                                        **
  ****************************************************************************/
 
-interface IServiceInfo {
-  name:         string,
-  description?: string,
-  versions:     string[]
-}
-
-interface IServerInfo {
-  name?:            string,
-  description?:     string,
-  pid?:             number,
-  uuid:             string,
-  address:          string,
-  port:             number,
-  socket:           any,
-  regTime:          number,
-  missedHeartbeats: number,
-  services:         Map<string, IServiceInfo>
-}
-
 type UUID = string;
-const NOTARIZE_TIMEOUT   = 10*60; // 10 minutes
-const HEARTBEAT_INTERVAL = 60; // 1 minute
+const NOTARIZE_TIMEOUT    = 10*60; // 10 minutes
+const HEARTBEAT_INTERVAL  = 60; // 1 minute
 const HEARTBEAT_THRESHOLD = 3; // # allowed missed heartbeats
 
 let _serversByUUID       = new Map<UUID,   IServerInfo>();
 let _serversBySocket     = new Map<any,    IServerInfo>();
 let _servicesByName      = new Map<string, Set<IServerInfo>>();
 let _pendingServers      = new Map<UUID,   IServerInfo>();
+let _strategies          = new Map<string, IBalanceStrategy>();
 let _maintenanceInterval = HEARTBEAT_INTERVAL * 1000;
 let _heartbeatThreshold  = HEARTBEAT_THRESHOLD;
+let _defaultStrategy: IBalanceStrategy;
 let _timerID: NodeJS.Timer;
 let _lastError: any;
 
@@ -61,10 +50,18 @@ let _lastError: any;
  **                                                                        **
  ****************************************************************************/
 
-export function initializeAPI(config?: Configuration) : void
+export function initializeAPI(config: Configuration) : void
 {
   _maintenanceInterval = (config ? config.get('HEARTBEAT_INTERVAL') : HEARTBEAT_INTERVAL)*1000;
   _heartbeatThreshold  = config ? config.get('HEARTBEAT_THRESHOLD') : HEARTBEAT_THRESHOLD;
+
+  // Install strategies
+  _defaultStrategy = new RoundRobinStrategy();
+  if (_defaultStrategy.initialize) {
+    _defaultStrategy.initialize(config);
+  }
+
+  // TODO load up strategies map from config data
 
   // Kick off timer
   if (_timerID) {
@@ -92,6 +89,19 @@ export function onDisconnect(socket: any) : PancakeError
  ** Private functions                                                      **
  **                                                                        **
  ****************************************************************************/
+
+function _getBalanceStrategy(service: string, ver: string)
+{
+    let strategy: IBalanceStrategy = _strategies.get(service + '-' + ver);
+    if (!strategy) {
+      strategy = _strategies.get(service);
+    }
+    if (!strategy) {
+      strategy = _defaultStrategy;
+    }
+    return strategy;
+}
+
 
 function _processError(status: string, reason?: string, obj?: any) : PancakeError
 {
@@ -383,13 +393,46 @@ function _registerServer(payload: any) : IEndpointResponse
 
 // function _lookup(payload: any) : IEndpointResponse
 // Takes a service name, version, and optional array of key tuples (hints)
-// Returns an address and port
+// Returns a server info digest
 // API config has strategies for server assignment (e.g., round-robin...).
 //   Some of these strategies may use hints (e.g., hashing user ids)
+// HINTS:
+//   OptLatestVersion: true/false
 
 function _lookup(payload: any) : IEndpointResponse
 {
-  return;
+  let service = payload.service;
+  let version = payload.version ? payload.version : '1.0.0';
+  let hints   = payload.hints;
+
+  // Quick and dirty validation
+  if (!service) {
+    return { status: 400, result: _processError('ERR_BAD_ARG', `No service name provided in lookup request.`) };
+  }
+  service.toLowerCase();
+
+  // Lookup our services
+  let servers: Set<IServerInfo> = _servicesByName.get(service);
+  if (!servers) {
+    return { status: 400, result: _processError('ERR_UNKNOWN_SERVICE', `Could not lookup unknown service '${service}'.`) };
+  }
+
+  // Delegate the lookup to the appropriate strategy
+  let server: IServerInfo = _getBalanceStrategy(service, version).lookup(service, version, servers, hints);
+  if (!server) {
+    return { status: 400, result: _processError('ERR_SERVICE_NOT_FOUND', `Could not find requested service '${service}', v${version}.`) };
+  }
+
+  // Just return potentially relevenat info
+  let returnServer = _.pick(server, [
+    'name',
+    'description',
+    'uuid',
+    'address',
+    'port'
+  ]);
+
+  return { status: 200, result: returnServer };
 }
 
 
