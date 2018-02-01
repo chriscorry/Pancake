@@ -103,7 +103,8 @@ class Logger
 {
   private _logLevel: number;
 
-  constructor(newLevel: any = LOG_INFO) {
+  constructor(newLevel: any = LOG_INFO)
+  {
     var argType = typeof newLevel;
     switch(argType) {
     case 'string':
@@ -123,7 +124,8 @@ class Logger
     }
   }
 
-  set level(newLevel: any) {
+  set level(newLevel: any)
+  {
     var argType = typeof newLevel;
     switch(argType) {
     case 'string':
@@ -137,11 +139,13 @@ class Logger
     }
   }
 
-  get level() {
+  get level()
+  {
     return this._logLevel;
   }
 
-  get levelAsString() {
+  get levelAsString()
+  {
     return logLevelsByOrd[this._logLevel];
   }
 
