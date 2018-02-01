@@ -4,6 +4,7 @@ find ~/Dropbox/Tech/Projects/Pancake/dist -type f -name '*.js' -exec rm "{}" +
 find ~/Dropbox/Tech/Projects/Pancake/dist -type f -name '*.map' -exec rm "{}" +
 find ~/Dropbox/Tech/Projects/Pancake/dist -type f -name '*.json' -exec rm "{}" +
 echo 'Copying over configuration files...'
+cp -f src/syrup/api/apiconfig_priv.json dist/syrup/api/apiconfig_priv.json
 cp -f src/valet/api/apiconfig.json dist/valet/api/apiconfig.json
 cp -f src/valet/api/valet_1.0.0/valet_1.0.0.config.json dist/valet/api/valet_1.0.0/valet_1.0.0.config.json
 cp -f src/pitboss/api/apiconfig.json dist/pitboss/api/apiconfig.json
