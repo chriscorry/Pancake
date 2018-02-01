@@ -6,7 +6,8 @@
       "description": "Passthrough caching service for arbitrary objects.",
       "versions": [
         { "ver": "1.0.0", "fileName": "valet_1.0.0/valet_1.0.0.js" }
-      ]
+      ],
+      "metaTags": { "audience": ["server", "tools"] }
     }
   ]
 }

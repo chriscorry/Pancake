@@ -172,7 +172,7 @@ export let flagpoleHandlers: IEndpointInfo[] = [
   { requestType: 'post',  path: '/cache/items',   event: 'items',  handler: getItemMultiple },
   { requestType: 'post',  path: '/cache/set',     event: 'set',    handler: setItem },
   { requestType: 'post',  path: '/cache/load',    event: 'load',   handler: loadItems },
-  { requestType: 'get',   path: '/cache/stats',   event: 'stats',  handler: getStats },
-  { requestType: 'get',   path: '/cache/dump',    event: 'dump',   handler: dumpCache },
-  { requestType: 'get',   path: '/cache/load10',  event: 'load10', handler: load10 }
+  { requestType: 'get',   path: '/cache/stats',   event: 'stats',  handler: getStats, metaTags: { audience: 'tools' } },
+  { requestType: 'get',   path: '/cache/dump',    event: 'dump',   handler: dumpCache, metaTags: { audience: 'tools' } },
+  { requestType: 'get',   path: '/cache/load10',  event: 'load10', handler: load10, metaTags: { audience: 'debug' } }
 ];

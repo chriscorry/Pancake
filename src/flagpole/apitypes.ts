@@ -7,7 +7,8 @@ export interface IEndpointInfo {
   requestType?: string,
   path?:        string,
   event?:       string,
-  route?:       string
+  route?:       string,
+  metaTags?:    any
 }
 
 export interface IEndpointResponse {

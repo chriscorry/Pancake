@@ -6,7 +6,8 @@
       "description": "Service clearinghouse and matchmaker.",
       "versions": [
         { "ver": "1.0.0", "fileName": "pitboss_1.0.0/pitboss_1.0.0.js" }
-      ]
+      ],
+      "metaTags": { "audience": ["server", "tools"] }
     }
   ]
 }

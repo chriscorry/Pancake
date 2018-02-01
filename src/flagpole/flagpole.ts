@@ -34,13 +34,13 @@ export interface IFlagpoleOpts {
 }
 
 interface _IApiInfo {
-  name:            string,
-  descriptiveName: string,
-  description:     string,
-  ver:             string,
-  apiHandler:      any,
-  apiToken:        string,
-  fileName:        string
+  name:             string,
+  description?:     string,
+  ver:              string,
+  apiHandler:       any,
+  apiToken:         string,
+  metaTags?:        any,
+  fileName?:        string
 }
 
 
@@ -68,12 +68,12 @@ export class Flagpole
    ****************************************************************************/
 
   private _registerAPIDirect(name:            string,
-                             descriptiveName: string,        // opt
                              description:     string,        // opt
                              ver:             string,
                              apiHandler:      any,
                              fileName?:       string,        // opt
-                             config?:         Configuration) : PancakeError // opt
+                             config?:         Configuration, // opt
+                             opts?:           any) : PancakeError // opt
   {
     // Simple validation
     if (!this._transports.length) {
@@ -106,12 +106,12 @@ export class Flagpole
 
     let newAPI: _IApiInfo = {
       name,
-      descriptiveName,
       description,
       ver,
       apiHandler,
       apiToken,
-      fileName
+      fileName,
+      metaTags: (opts && opts.metaTags) ? opts.metaTags : undefined
     };
     let endpointInfo: IEndpointInfo;
 
@@ -158,10 +158,10 @@ export class Flagpole
    ****************************************************************************/
 
   private _registerAPIFromFile(name: string,
-                               descriptiveName: string,
                                description: string,
                                ver: string,
-                               fileName: string) : PancakeError
+                               fileName: string,
+                               opts?: any) : PancakeError
   {
     // Simple validation
     if (!this._transports.length) {
@@ -194,7 +194,7 @@ export class Flagpole
           }
 
           // ... and register it
-          err = this._registerAPIDirect(name, descriptiveName, description, ver, newAPI, safeFileName, config);
+          err = this._registerAPIDirect(name, description, ver, newAPI, safeFileName, config, opts);
 
         // Swallow the exception
         } catch(error) {
@@ -313,17 +313,17 @@ export class Flagpole
    ****************************************************************************/
 
   registerAPI(name: string,
-              descriptiveName: string,
               description: string,
               ver: string,
-              pathOrHandler: any) : PancakeError
+              pathOrHandler: any,
+              opts?: any) : PancakeError
   {
     let typePathOrHandler: string = typeof pathOrHandler;
     if (typePathOrHandler === 'object') {
-      return this._registerAPIDirect(name, descriptiveName, description, ver, pathOrHandler);
+      return this._registerAPIDirect(name, description, ver, pathOrHandler, undefined, opts);
     }
     else if (typePathOrHandler === 'string'){
-      return this._registerAPIFromFile(name, descriptiveName, description, ver, pathOrHandler);
+      return this._registerAPIFromFile(name, description, ver, pathOrHandler, opts);
     }
     return new PancakeError('ERR_BAD_ARG', 'FP: Must provide filename or handler to registerAPI.');
   }
@@ -458,7 +458,11 @@ export class Flagpole
         if (api.versions && !err) {
           api.versions.forEach((ver: any) => {
             if (!err) {
-              err = this.registerAPI(api.name, api.descriptiveName, api.description, ver.ver, ver.fileName);
+              let metaTags = api.metaTags;
+              if (metaTags && !Array.isArray(metaTags)) {
+                metaTags = [ metaTags ];
+              }
+              err = this.registerAPI(api.name, api.description, ver.ver, ver.fileName, { metaTags });
             }
           });
         }
@@ -488,7 +492,7 @@ export class Flagpole
     this._registeredAPIsByToken.forEach((newAPI: _IApiInfo) => {
       let api = apis.get(newAPI.name);
       if (!api) {
-        api = { name: newAPI.name, description: newAPI.description, versions: [] };
+        api = { name: newAPI.name, description: newAPI.description, metaTags: newAPI.metaTags, versions: [] };
         apis.set(api.name, api);
       }
       api.versions.push(newAPI.ver);

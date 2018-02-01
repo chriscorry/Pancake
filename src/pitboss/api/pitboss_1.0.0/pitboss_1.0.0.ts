@@ -524,10 +524,10 @@ export function getLastError() : PancakeError
  ****************************************************************************/
 
 export let flagpoleHandlers: IEndpointInfo[] = [
-  { requestType: 'post',  path: '/pitboss/register',    event: 'register',   handler: _registerServer },
-  { requestType: 'post',  path: '/pitboss/lookup',      event: 'lookup',     handler: _lookup },
-  { requestType: 'post',  path: '/pitboss/server',      event: 'server',     handler: _getServerInfo },
-  { requestType: 'get',   path: '/pitboss/servers',     event: 'servers',    handler: _getServerRegistry },
+  { requestType: 'post',  path: '/pitboss/register',    event: 'register',   handler: _registerServer,    metaTags: { audience: 'server' } },
+  { requestType: 'post',  path: '/pitboss/lookup',      event: 'lookup',     handler: _lookup             },
+  { requestType: 'post',  path: '/pitboss/server',      event: 'server',     handler: _getServerInfo      },
+  { requestType: 'get',   path: '/pitboss/servers',     event: 'servers',    handler: _getServerRegistry  },
   { requestType: 'get',   path: '/pitboss/services',    event: 'services',   handler: _getServiceRegistry },
-  {                                                     event: 'notarize',   handler: _onNotarize }
+  {                                                     event: 'notarize',   handler: _onNotarize,        metaTags: { audience: 'server' } }
 ];
