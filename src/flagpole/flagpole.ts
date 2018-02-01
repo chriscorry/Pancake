@@ -458,11 +458,7 @@ export class Flagpole
         if (api.versions && !err) {
           api.versions.forEach((ver: any) => {
             if (!err) {
-              let metaTags = api.metaTags;
-              if (metaTags && !Array.isArray(metaTags)) {
-                metaTags = [ metaTags ];
-              }
-              err = this.registerAPI(api.name, api.description, ver.ver, ver.fileName, { metaTags });
+              err = this.registerAPI(api.name, api.description, ver.ver, ver.fileName, { metaTags: api.metaTags});
             }
           });
         }
