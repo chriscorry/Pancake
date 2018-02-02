@@ -1,5 +1,6 @@
 import util = require('util');
 import path = require('path');
+const  semver = require('semver');
 
 
 /****************************************************************************
@@ -68,6 +69,18 @@ export function getTimeComponents(ms: number) : TimeComponents
   x /= 24;
   let days: number = Math.floor(x);
   return { days, hours, minutes, seconds };
+}
+
+
+export function doesVersionSatisfy(checkVer: string, versions: string[]) : boolean
+{
+  // Assumes versions array is sorted in DECENDING order
+  for (let version of versions) {
+    if (semver.satisfies(checkVer, '^' + version)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 
