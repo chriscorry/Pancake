@@ -5,7 +5,7 @@
       "descriptiveName": "Valet Caching API",
       "description": "Passthrough caching service for arbitrary objects.",
       "versions": [
-        { "ver": "1.0.0", "fileName": "valet_1.0.0/valet_1.0.0.js" }
+        { "ver": "1.0.0", "fileName": "valet_1.0.0/valet.js" }
       ],
       "metaTags": { "audience": ["server", "tools"] }
     }

@@ -5,7 +5,7 @@
       "descriptiveName": "Screech Messaging Server",
       "description": "Provides messaging and publish/subscribe services to clients and servers.",
       "versions": [
-        { "ver": "1.0.0", "fileName": "screech_1.0.0/screech_1.0.0.js" }
+        { "ver": "1.0.0", "fileName": "screech_1.0.0/screech.js" }
       ],
       "metaTags": { "audience": ["client", "server", "tools"] }
     }

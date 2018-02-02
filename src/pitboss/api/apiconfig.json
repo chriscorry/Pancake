@@ -5,7 +5,7 @@
       "descriptiveName": "Pitboss Server and API Broker",
       "description": "Service clearinghouse and matchmaker.",
       "versions": [
-        { "ver": "1.0.0", "fileName": "pitboss_1.0.0/pitboss_1.0.0.js" }
+        { "ver": "1.0.0", "fileName": "pitboss_1.0.0/pitboss.js" }
       ],
       "metaTags": { "audience": ["server", "tools"] }
     }

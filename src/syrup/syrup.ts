@@ -9,7 +9,7 @@ import fs                from 'fs';
 import restify           = require('restify');
 import socketIO          = require('socket.io');
 
-import pitboss           = require('../pitboss/api/pitboss_1.0.0/pitboss_client_1.0.0');
+import pitboss           = require('../pitboss/api/pitboss_1.0.0/pitboss_client');
 import { PancakeError }  from '../util/pancake-err';
 import { log }           from '../util/pancake-utils';
 import { Configuration } from '../util/pancake-config';
