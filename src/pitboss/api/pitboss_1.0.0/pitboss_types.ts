@@ -23,7 +23,8 @@ export interface IBalanceStrategy {
 export interface IServiceInfo {
   name:         string,
   description?: string,
-  versions:     string[]
+  versions:     string[],
+  metaTags?:    any
 }
 
 export interface IServerInfo {

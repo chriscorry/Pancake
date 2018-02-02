@@ -4,20 +4,10 @@
  **                                                                        **
  ****************************************************************************/
 
-/*
-const  _                   = require('lodash');
-const  uuidv4              = require('uuid/v4');
-import { PancakeError }      from '../../../util/pancake-err';
-import { IEndpointInfo,
-         IEndpointResponse } from '../../../flagpole/apitypes';
-*/
 const  semver              = require('semver');
-import * as utils            from '../../../util/pancake-utils';
-import { Configuration }     from '../../../util/pancake-config';
+import { log }               from '../../../util/pancake-utils';
 import { IServerInfo,
-         IServiceInfo,
          IBalanceStrategy }  from './pitboss_types';
-const  log                 = utils.log;
 
 
 /****************************************************************************
@@ -43,7 +33,7 @@ export class RoundRobinStrategy implements IBalanceStrategy
 
   get name() : string
   {
-    return 'Round Robin';
+    return 'RoundRobin';
   }
 
   lookup(service: string, ver: string, servers: Set<IServerInfo>, hints: any) : IServerInfo

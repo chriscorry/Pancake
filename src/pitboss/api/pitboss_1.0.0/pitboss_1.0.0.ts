@@ -19,6 +19,7 @@ const  log                 = utils.log;
 
 // Load-balancing strategies
 import { RoundRobinStrategy } from './strat_roundrobin';
+import { RandomStrategy }     from './strat_random';
 
 
 /****************************************************************************
@@ -162,18 +163,6 @@ function _removeServerRegistration(serverOrAddress: any, port?: number, silent: 
 }
 
 
-function _doesVersionSatisfy(checkVer: string, versions: string[]) : boolean
-{
-  // Assumes versions array is sorted in DECENDING order
-  for (let version of versions) {
-    if (semver.satisfies(checkVer, '^' + version)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-
 function _clearStalePendingServers() : void
 {
   _pendingServers = utils.filterMap(_pendingServers, (name: string, server: IServerInfo) => {
@@ -210,11 +199,12 @@ function _getServerDigest(server: IServerInfo, includeServices: boolean = true) 
   if (true === includeServices) {
     let returnServices: any = [];
     server.services.forEach((service: IServiceInfo, name: string) => {
-      let returnService = {
-        name: service.name,
-        description: service.description,
-        versions: service.versions
-      }
+      let returnService = _.pick(service, [
+        'name',
+        'description',
+        'metaTags',
+        'versions'
+      ]);
       returnServices.push(returnService);
     });
     returnServer.services = returnServices;
@@ -230,6 +220,16 @@ function _getServiceVersions(server: IServerInfo, serviceName: string) : string[
     if (service) return service.versions;
   }
   return [];
+}
+
+
+function _getServiceMetaTags(server: IServerInfo, serviceName: string) : any
+{
+  if (server) {
+    let service = server.services.get(serviceName);
+    if (service) return service.metaTags;
+  }
+  return;
 }
 
 
@@ -352,7 +352,7 @@ function _registerServer(payload: any) : IEndpointResponse
         });
 
         // Okay -- good to go
-        let newService: IServiceInfo = { name: service.name, description: service.description, versions };
+        let newService: IServiceInfo = { name: service.name, description: service.description, versions, metaTags: service.metaTags };
         newServer.services.set(newService.name, newService);
       }
       else {
@@ -450,11 +450,13 @@ function _getServerRegistry(payload: any) : IEndpointResponse
 function _getServiceRegistry(payload: any) : IEndpointResponse
 {
   let returnItems: any[] = [];
+  let metaTags
   _servicesByName.forEach((servers: Set<IServerInfo>, service: string) => {
     let returnServers: any[] = [];
     servers.forEach((server: IServerInfo) => {
       let digest = _getServerDigest(server, false);
       digest.versions = _getServiceVersions(server, service);
+      digest.metaTags = _getServiceMetaTags(server, service);
       returnServers.push(digest);
     });
     let returnService = { service, servers: returnServers };
@@ -511,7 +513,7 @@ function _onNotarize(payload: any) : IEndpointResponse
 }
 
 
-export function getLastError() : PancakeError
+function getLastError() : PancakeError
 {
   return _lastError;
 }
