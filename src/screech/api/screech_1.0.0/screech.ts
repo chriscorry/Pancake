@@ -71,9 +71,73 @@ function _processError(status: string, reason?: string, obj?: any) : PancakeErro
  **                                                                        **
  ****************************************************************************/
 
+function _createDomain(payload: any) : IEndpointResponse
+{
+  return { status: 200 };
+}
 
 
-function getLastError() : PancakeError
+function _deleteDomain(payload: any) : IEndpointResponse
+{
+  return { status: 200 };
+}
+
+
+function _addDomainRelay(payload: any) : IEndpointResponse
+{
+  return { status: 200 };
+}
+
+
+function _removeDomainRelay(payload: any) : IEndpointResponse
+{
+  return { status: 200 };
+}
+
+
+function _openChannel(payload: any) : IEndpointResponse
+{
+  return { status: 200 };
+}
+
+
+function _setChannelProperties(payload: any) : IEndpointResponse
+{
+  return { status: 200 };
+}
+
+
+function _addChannelRelay(payload: any) : IEndpointResponse
+{
+  return { status: 200 };
+}
+
+
+function _removeChannelRelay(payload: any) : IEndpointResponse
+{
+  return { status: 200 };
+}
+
+
+function _send(payload: any) : IEndpointResponse
+{
+  return { status: 200 };
+}
+
+
+function _subscribe(payload: any) : IEndpointResponse
+{
+  return { status: 200 };
+}
+
+
+function _clearStaleChannels(payload: any) : IEndpointResponse
+{
+  return { status: 200 };
+}
+
+
+export function getLastError() : PancakeError
 {
   return _lastError;
 }
@@ -86,12 +150,15 @@ function getLastError() : PancakeError
  ****************************************************************************/
 
 export let flagpoleHandlers: IEndpointInfo[] = [
-  /*
-  { requestType: 'post',  path: '/pitboss/register',    event: 'register',   handler: _registerServer,    metaTags: { audience: 'server' } },
-  { requestType: 'post',  path: '/pitboss/lookup',      event: 'lookup',     handler: _lookup             },
-  { requestType: 'post',  path: '/pitboss/server',      event: 'server',     handler: _getServerInfo      },
-  { requestType: 'get',   path: '/pitboss/servers',     event: 'servers',    handler: _getServerRegistry  },
-  { requestType: 'get',   path: '/pitboss/services',    event: 'services',   handler: _getServiceRegistry },
-  {                                                     event: 'notarize',   handler: _onNotarize,        metaTags: { audience: 'server' } }
-  */
+  { requestType: 'post',  path: '/screech/createdomain',       event: 'createDomain',       handler: _createDomain },
+  { requestType: 'post',  path: '/screech/deletedomain',       event: 'deleteDomain',       handler: _deleteDomain },
+  { requestType: 'post',  path: '/screech/adddomainrelay',     event: 'addDomainRelay',     handler: _addDomainRelay },
+  { requestType: 'post',  path: '/screech/removedomainrelay',  event: 'removeDomainRelay',  handler: _removeDomainRelay },
+  { requestType: 'post',  path: '/screech/openchannel',        event: 'openChannel',        handler: _openChannel },
+  { requestType: 'post',  path: '/screech/setchannelprops',    event: 'setChannelProps',    handler: _setChannelProperties },
+  { requestType: 'post',  path: '/screech/addchannelrelay',    event: 'addChannelRelay',    handler: _addChannelRelay },
+  { requestType: 'post',  path: '/screech/removechannelrelay', event: 'removeChannelRelay', handler: _removeChannelRelay },
+  { requestType: 'get',   path: '/screech/clearstalechannels', event: 'clearStaleChannels', handler: _clearStaleChannels },
+  { requestType: 'post',  path: '/screech/send',               event: 'send',               handler: _send },
+  {                                                            event: 'subscribe',          handler: _subscribe }
 ];
