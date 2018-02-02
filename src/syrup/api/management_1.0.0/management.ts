@@ -212,8 +212,8 @@ function _getStats(payload: any) : IEndpointResponse
 
 
 export let flagpoleHandlers: IEndpointInfo[] = [
-  { requestType: 'post',  path: '/management/logbookmark',    event: 'logBookmark',    handler: _logBookmark, metaTags: { audience: 'debug' } },
-  { requestType: 'post',  path: '/management/setloglevel',    event: 'setLogLevel',    handler: _setLogLevel },
+  { requestType: 'get',   path: '/management/logbookmark',    event: 'logBookmark',    handler: _logBookmark, metaTags: { audience: 'debug' } },
+  { requestType: 'get',   path: '/management/setloglevel',    event: 'setLogLevel',    handler: _setLogLevel },
   { requestType: 'patch', path: '/management/reloadapis',     event: 'reloadAPIs',     handler: _reloadAPIConfig },
   { requestType: 'get',   path: '/management/apis',           event: 'apis',           handler: _getAPIs },
   { requestType: 'del',   path: '/management/unregisterapi',  event: 'unregisterapi',  handler: _unregisterAPI },
