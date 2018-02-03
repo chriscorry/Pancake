@@ -51,7 +51,8 @@ let _lastError: any;
  **                                                                        **
  ****************************************************************************/
 
-export function initializeAPI(config: Configuration) : void
+export function initializeAPI(name: string, ver: string, apiToken:string,
+                              config: Configuration) : void
 {
   _maintenanceInterval = (config ? config.get('HEARTBEAT_INTERVAL') : HEARTBEAT_INTERVAL)*1000;
   _heartbeatThreshold  = config ? config.get('HEARTBEAT_THRESHOLD') : HEARTBEAT_THRESHOLD;
@@ -72,10 +73,10 @@ export function initializeAPI(config: Configuration) : void
 }
 
 
-export function onConnect(socket: any) : PancakeError
-{
-  return;
-}
+// export function onConnect(socket: any) : PancakeError
+// {
+//   return;
+// }
 
 
 export function onDisconnect(socket: any) : PancakeError

@@ -100,7 +100,11 @@ export async function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
   apiSearchDirs += (path.resolve() + path.delimiter);
   apiSearchDirs += (__dirname + '/../../config' + path.delimiter);
   apiSearchDirs += (__dirname + '/../syrup/api');
-  flagpole.initialize(serverRestify, serverSocketIO, { apiSearchDirs, envName: config.envName });
+  flagpole.initialize(serverRestify, serverSocketIO, {
+    apiSearchDirs,
+    envName: config.envName,
+    events: pitboss.events
+   });
 
 
   /****************************************************************************

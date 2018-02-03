@@ -54,7 +54,8 @@ let IdentityFactory = {
  ****************************************************************************/
 
 
-export function initializeAPI(config?: Configuration) : void
+export function initializeAPI(name: string, ver: string, apiToken:string,
+                              config: Configuration) : void
 {
   let maintenanceInterval: number = config ? config.get('MAINTENANCE_INTERVAL') : 60*5;
   let maxCacheSize: number        = config ? config.get('MAX_CACHE_SIZE') : 100;

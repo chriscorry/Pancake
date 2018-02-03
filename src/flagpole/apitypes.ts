@@ -21,7 +21,7 @@ export type EndpointHandler = (payload: any) => IEndpointResponse;
 
 export interface IAPI
 {
-  initializeAPI?(config: Configuration, name: string, ver: string, apiToken:string) : void;
+  initializeAPI?(name: string, ver: string, apiToken:string, config: Configuration, opts:any) : void;
   terminateAPI?() : void;
 
   onConnect?(socket: any) : PancakeError;

@@ -4,6 +4,7 @@
  **                                                                        **
  ****************************************************************************/
 
+import EventEmitter      = require('events');
 import axios             from 'axios';
 import ip                = require('ip');
 import socketIOClient    = require('socket.io-client');
@@ -78,6 +79,7 @@ function _reconnect()
 
 function _onDisconnect(socket: any)
 {
+  events.emit('disconnect', socket);
   _initiateReconnects();
   log.info(`PITBOSS: Lost connection to our Pitboss. Will attempt to reconnect in ${_reconnectInterval} sec.`);
 }
@@ -85,6 +87,7 @@ function _onDisconnect(socket: any)
 
 function _onHeartbeat(heartbeat: any, ack: Function)
 {
+  events.emit('heartbeat');
   log.trace('PITBOSS: Received heartbeat request. Responding.');
   ack({ status: 'OK', timestamp: Date.now() });
 }
@@ -105,6 +108,8 @@ function _postRegistration(socket: any, registerResp: any) : void
   // Remember save off vitals
   _pitbossSocket = socket;
   _server.uuid = registerResp.result.uuid;
+  events.emit('connect', socket);
+  events.emit('serverUUID', _server.uuid);
 
   // Cancel any reconnect attempts
   if (_timerID) {
@@ -206,6 +211,12 @@ export function _registerWithoutNotary(server: any, pitbossBaseURL: string, logE
  **                                                                        **
  ****************************************************************************/
 
+export function getServerUUID() : string
+{
+    return _server ? _server.uuid : undefined;
+}
+
+
 export function registerWithPitboss(name: string, description: string, port: number,
                                     config: Configuration, logErrors = true) : void
 {
@@ -249,4 +260,11 @@ export function registerWithPitboss(name: string, description: string, port: num
 
   // Do the real deal
   _registerWithoutNotary(_server, _pitbossBaseURL, logErrors);
+}
+
+
+// THE event emitter singleton
+export let events: EventEmitter;
+if (!events) {
+  events = new EventEmitter();
 }

@@ -24,15 +24,21 @@ const DEFAULT_SHUTDOWN_TIMER = 5; // 5 seconds
 let _nameThisAPI: string;
 let _verThisAPI: string;
 let _serverStart: number;
+let _uuid: string;
 let _shutdownCountdown: number = 0;
 let _timerID: NodeJS.Timer;
 
 
 /****************************************************************************
  **                                                                        **
- ** Management API                                                         **
+ ** Private functions                                                      **
  **                                                                        **
  ****************************************************************************/
+
+function _onNewServerUUID(uuid: string) : void
+{
+  _uuid = uuid;
+}
 
 
 function _shutdownServerCallback() : void
@@ -50,14 +56,27 @@ function _shutdownServerCallback() : void
 }
 
 
+/****************************************************************************
+ **                                                                        **
+ ** Management API                                                         **
+ **                                                                        **
+ ****************************************************************************/
+
 export function initializeAPI(name: string,
                               ver: string,
-                              apiToken:string) : void
+                              apiToken:string,
+                              config: any,
+                              opts: any) : void
 {
   _nameThisAPI       = name;
   _verThisAPI        = ver;
   _serverStart       = Date.now();
   _shutdownCountdown = 0;
+
+  // We want to hear about registration events
+  if (opts.events) {
+    opts.events.on('serverUUID', _onNewServerUUID);
+  }
 }
 
 
@@ -205,11 +224,18 @@ function _getAPIs(payload: any) : IEndpointResponse
 function _getStats(payload: any) : IEndpointResponse
 {
   return { status: 200, result: {
+    uuid: _uuid,
     uptime: util.getTimeComponents(Date.now() - _serverStart),
     memstats: process.memoryUsage()
   }};
 }
 
+
+/****************************************************************************
+ **                                                                        **
+ ** Flagpole housekeeping                                                  **
+ **                                                                        **
+ ****************************************************************************/
 
 export let flagpoleHandlers: IEndpointInfo[] = [
   { requestType: 'get',   path: '/management/logbookmark',    event: 'logBookmark',    handler: _logBookmark, metaTags: { audience: 'debug' } },

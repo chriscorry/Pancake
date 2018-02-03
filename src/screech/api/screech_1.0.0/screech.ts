@@ -4,11 +4,6 @@
  **                                                                        **
  ****************************************************************************/
 
-/*
-const  _                   = require('lodash');
-const  uuidv4              = require('uuid/v4');
-const  semver              = require('semver');
-*/
 import * as utils            from '../../../util/pancake-utils';
 import { PancakeError }      from '../../../util/pancake-err';
 import { Configuration }     from '../../../util/pancake-config';
@@ -23,7 +18,35 @@ const  log                 = utils.log;
  **                                                                        **
  ****************************************************************************/
 
- let _lastError: any;
+interface IRelayServer {
+    uuid: string,
+    address: string,
+    port: number
+}
+
+interface IDomain {
+  name: string,
+  description?: string,
+  channels: Map<string, IChannel>
+  relays: IRelayServer[];
+}
+
+interface IChannel {
+  name: string,
+  description?: string,
+  subscribers: any[]
+  relays: IRelayServer[];
+}
+
+interface IMessage {
+  payload: any,
+  sent: number,
+  visitedRelays: string[]
+}
+
+let _lastError: any;
+let _domains  = new Map<string, IDomain>();
+let _channels = new Map<string, IChannel>();
 
 
 /****************************************************************************
@@ -32,21 +55,22 @@ const  log                 = utils.log;
  **                                                                        **
  ****************************************************************************/
 
-export function initializeAPI(config: Configuration) : void
+export function initializeAPI(name: string, ver: string, apiToken:string,
+                              config: Configuration) : void
 {
 }
 
 
-export function onConnect(socket: any) : PancakeError
-{
-  return;
-}
+// export function onConnect(socket: any) : PancakeError
+// {
+//   return;
+// }
 
 
-export function onDisconnect(socket: any) : PancakeError
-{
-  return;
-}
+// export function onDisconnect(socket: any) : PancakeError
+// {
+//   return;
+// }
 
 
 /****************************************************************************

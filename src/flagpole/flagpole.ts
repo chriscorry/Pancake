@@ -30,7 +30,8 @@ import { TransportSocketIO }   from './websockets';
 
 export interface IFlagpoleOpts {
   envName?:       string,
-  apiSearchDirs?: string
+  apiSearchDirs?: string,
+  events?:        any
 }
 
 interface _IApiInfo {
@@ -56,6 +57,7 @@ export class Flagpole
   private _envName: string;
   private _apiSearchDirs: string[] = [];
   private _registeredAPIsByToken   = new Map<string, _IApiInfo>();
+  private _opts: IFlagpoleOpts;
 
   // Transports
   private _transports: ITransport[] = [];
@@ -141,7 +143,7 @@ export class Flagpole
     // Let the API know
     if (newAPI.apiHandler.initializeAPI) {
       log.trace(`FP: Calling API initializer`);
-      newAPI.apiHandler.initializeAPI(config, name, ver, apiToken);
+      newAPI.apiHandler.initializeAPI(config, name, ver, apiToken, this._opts);
     }
     for (let transport of this._transports) {
       if (transport.registerAPI) {
@@ -278,6 +280,9 @@ export class Flagpole
 
   initialize(serverRestify: any, serverSocketIO: any, opts: IFlagpoleOpts) : void
   {
+    // Remember our opts
+    this._opts = opts;
+
     // Initialize our REST transport
     let transportREST = new TransportREST();
     transportREST.initialize({
