@@ -4,6 +4,7 @@
  **                                                                        **
  ****************************************************************************/
 
+const  uuidv4              = require('uuid/v4');
 import * as utils            from '../../../util/pancake-utils';
 import { PancakeError }      from '../../../util/pancake-err';
 import { Configuration }     from '../../../util/pancake-config';
@@ -26,20 +27,28 @@ interface IRelayServer {
 
 interface IDomain {
   name: string,
+  uuid: string,
   description?: string,
+  opts: any,
   channels: Map<string, IChannel>
   relays: IRelayServer[];
 }
 
 interface IChannel {
   name: string,
+  uuid: string,
+  domain: IDomain,
+  version: string,
   description?: string,
+  opts?: any,
   subscribers: any[]
   relays: IRelayServer[];
 }
 
 interface IMessage {
   payload: any,
+  version: string,
+  channel: IChannel,
   sent: number,
   visitedRelays: string[]
 }
@@ -88,6 +97,78 @@ function _processError(status: string, reason?: string, obj?: any) : PancakeErro
 }
 
 
+function _getDomain(domainName: string) : IDomain
+{
+  let checkName = domainName;
+  if (checkName) {
+    return _domains.get(checkName.toLowerCase());
+  }
+  return;
+}
+
+
+function _isValidDomain(domainName: string) : boolean
+{
+  return _getDomain(domainName) ? true : false;
+}
+
+
+function _getChannel(domainName: string, channelName: string) : IChannel
+{
+  let domain = _getDomain(domainName);
+  if (domain) {
+    let checkChannelName = channelName;
+    if (checkChannelName) {
+      return _channels.get(domain.name + '-' + checkChannelName.toLowerCase());
+    }
+  }
+  return;
+}
+
+
+function _isValidChannel(domainName: string, channelName: string) : boolean
+{
+  return _getChannel(domainName, channelName) ? true : false;
+}
+
+
+function _createChannel(domainName: string, channelName: string, version: string, description?: string, opts?: any) : IChannel
+{
+  // Quick and dirty validation
+  let domain = _getDomain(domainName);
+  if (!domain) {
+    _processError('ERR_BAD_ARG', `Missing or invalid Domain name.`);
+    return;
+  }
+  if (!channelName) {
+    _processError('ERR_BAD_ARG', `Missing Channel name.`);
+    return;
+  }
+
+  // Pre-existing?
+  let existingChannel = _getChannel(domainName, channelName);
+  if (existingChannel) {
+    return existingChannel;
+  }
+
+  // Clean up and register
+  channelName = channelName.toLowerCase();
+  let newChannel: IChannel = {
+    name: channelName,
+    uuid: uuidv4(),
+    domain,
+    version,
+    description,
+    opts,
+    subscribers: [],
+    relays: []
+  }
+  _channels.set(domain.name + '-' + channelName, newChannel);
+  _channels.set(newChannel.uuid, newChannel);
+
+  return newChannel;
+}
+
 
 /****************************************************************************
  **                                                                        **
@@ -97,7 +178,35 @@ function _processError(status: string, reason?: string, obj?: any) : PancakeErro
 
 function _createDomain(payload: any) : IEndpointResponse
 {
-  return { status: 200 };
+  let domainName = payload.name;
+  let description = payload.description;
+  let opts = payload.opts;
+
+  // Quick and dirty validation
+  if (!domainName) {
+    return { status: 400, result: _processError('ERR_BAD_ARG', `Domain name not specified.`) };
+  }
+
+  // Does this domain already exist?
+  domainName = domainName.toLowerCase();
+  let existingDomain = _domains.get(domainName);
+  if (existingDomain) {
+    return { status: 200, result: { reason: 'Domain already exists', uuid: existingDomain.uuid } };
+  }
+
+  // Clean up and register
+  let newDomain: IDomain = {
+    name: domainName,
+    uuid: uuidv4(),
+    description,
+    opts,
+    channels: new Map<string, IChannel>(),
+    relays: []
+  }
+  _domains.set(domainName, newDomain);
+  _domains.set(newDomain.uuid, newDomain);
+
+  return { status: 200, result: { reason: 'Domain successfully created', uuid: newDomain.uuid } };
 }
 
 
@@ -121,7 +230,17 @@ function _removeDomainRelay(payload: any) : IEndpointResponse
 
 function _openChannel(payload: any) : IEndpointResponse
 {
-  return { status: 200 };
+  let domainName = payload.domain;
+  let channelName = payload.name;
+  let description = payload.description;
+  let opts = payload.opts;
+
+  let newChannel = _createChannel(domainName, channelName, undefined, description, opts);
+  if (!newChannel) {
+    return { status: 400, result: getLastError() };
+  }
+
+  return { status: 200, result: { reason: 'Channel successfully opened', uuid: newChannel.uuid } };
 }
 
 
