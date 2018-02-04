@@ -8,14 +8,11 @@ socket.on('disconnect', function () {
     console.log('Disconnected from server');
 });
 
-socket.on('newMessage', function (body) {
+socket.on('newMessage', function (payload) {
   console.log('Received a new message:');
-  console.log(`   From: ${body.sender}`);
-  console.log(`   Time: ${Date(body.createdAt)}`);
-  console.log(`   Text: "${body.text}"`);
-
-});
-
-socket.emit('createMessage', { sender: 'Frank', text: 'Hello world'}, (data) => {
-  console.log('Received awk: ', data);
+  console.log(`   uuid: ${payload.uuid}`);
+  console.log(`   domain: ${payload.domain}`);
+  console.log(`   channel: ${payload.channel}`);
+  console.log(`   sent: ${Date(payload.sent)}`);
+  console.log(`   payload: ${JSON.stringify(payload.payload, null, 2)}`);
 });

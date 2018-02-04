@@ -4,6 +4,7 @@
  **                                                                        **
  ****************************************************************************/
 
+const  _                   = require('lodash');
 const  uuidv4              = require('uuid/v4');
 import * as utils            from '../../../util/pancake-utils';
 import { PancakeError }      from '../../../util/pancake-err';
@@ -41,11 +42,12 @@ interface IChannel {
   version: string,
   description?: string,
   opts?: any,
-  subscribers: any[]
+  subscribers: Set<any>, // set of sockets
   relays: IRelayServer[];
 }
 
 interface IMessage {
+  uuid: string,
   payload: any,
   version: string,
   channel: IChannel,
@@ -119,7 +121,12 @@ function _getChannel(domainName: string, channelName: string) : IChannel
   if (domain) {
     let checkChannelName = channelName;
     if (checkChannelName) {
-      return _channels.get(domain.name + '-' + checkChannelName.toLowerCase());
+      // Try the long-form name first
+      let channel = _channels.get(domain.name + '-' + checkChannelName.toLowerCase());
+      if (channel) return channel;
+
+      // Maybe channel is provided as a uuid?
+      return _channels.get(checkChannelName.toLowerCase());
     }
   }
   return;
@@ -160,13 +167,66 @@ function _createChannel(domainName: string, channelName: string, version: string
     version,
     description,
     opts,
-    subscribers: [],
+    subscribers: new Set<any>(),
     relays: []
   }
   _channels.set(domain.name + '-' + channelName, newChannel);
   _channels.set(newChannel.uuid, newChannel);
 
   return newChannel;
+}
+
+
+function _sendMessage(domainName: string, channelName: string, version: string, payload: any) : IMessage
+{
+  // Retrieve the channel
+  let channel = _getChannel(domainName, channelName);
+  if (!channel) {
+    _processError('ERR_BAD_CHANNEL', `Could not retrieve channel ('${domainName}-${channelName}')`);
+    return;
+  }
+
+  // Create the message
+  let message: IMessage = {
+    uuid: uuidv4(),
+    payload,
+    version,
+    channel,
+    sent: Date.now(),
+    visitedRelays: []
+  }
+  let subscriberMessage = _.pick(message, [
+    'uuid', 'payload', 'version', 'sent'
+  ]);
+  subscriberMessage.domain = channel.domain.uuid;
+  subscriberMessage.channel = channel.uuid;
+
+  // Send the messages to local subscribers
+  for (let socket of channel.subscribers) {
+    socket.emit('newMessage', subscriberMessage);
+  }
+
+  // TODO: Send message off to our relays
+
+  return message;
+}
+
+
+function _subscribeChannel(domainName: string, channelName: string, version: string, socket: any) : IChannel
+{
+  // Retrieve the channel
+  let channel = _getChannel(domainName, channelName);
+  if (!channel) {
+    _processError('ERR_BAD_CHANNEL', `Could not retrieve channel ('${domainName}-${channelName}')`);
+    return;
+  }
+
+  // Add this subscriber to the subscriber list
+  if (!channel.subscribers.has(socket)) {
+    channel.subscribers.add(socket);
+  }
+
+  return channel;
 }
 
 
@@ -264,13 +324,40 @@ function _removeChannelRelay(payload: any) : IEndpointResponse
 
 function _send(payload: any) : IEndpointResponse
 {
-  return { status: 200 };
+  let domainName = payload.domain;
+  let channelName = payload.channel;
+  let messagePayload = payload.payload;
+
+  // Shoot it off
+  let message = _sendMessage(domainName, channelName, undefined, messagePayload);
+  if (!message) {
+    return { status: 400, result: getLastError() };
+  }
+
+  // All good
+  return { status: 200, result: {
+    reason: 'Message successfully sent.',
+    uuid: message.uuid,
+    domain: message.channel.domain.uuid,
+    channel: message.channel.uuid } };
 }
 
 
 function _subscribe(payload: any) : IEndpointResponse
 {
-  return { status: 200 };
+  let socket = payload.socket;
+  let domainName = payload.domain;
+  let channelName = payload.channel;
+
+  let channel = _subscribeChannel(domainName, channelName, undefined, socket);
+  if (!channel) {
+    return { status: 400, result: getLastError() };
+  }
+
+  return { status: 200, result: {
+      reason: 'Successfully subscribed to channel.',
+      domain: channel.domain.uuid,
+      channel: channel.uuid } };
 }
 
 
