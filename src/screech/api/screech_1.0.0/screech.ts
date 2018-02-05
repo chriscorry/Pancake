@@ -4,13 +4,15 @@
  **                                                                        **
  ****************************************************************************/
 
-const  _                   = require('lodash');
-const  uuidv4              = require('uuid/v4');
 import * as utils            from '../../../util/pancake-utils';
 import { PancakeError }      from '../../../util/pancake-err';
 import { Configuration }     from '../../../util/pancake-config';
 import { IEndpointInfo,
          IEndpointResponse } from '../../../flagpole/apitypes';
+import { IDomain,
+         IChannel,
+         IMessage,
+         messaging }         from '../../messaging';
 const  log                 = utils.log;
 
 
@@ -19,45 +21,6 @@ const  log                 = utils.log;
  ** Vars & definitions                                                     **
  **                                                                        **
  ****************************************************************************/
-
-interface IRelayServer {
-    uuid: string,
-    address: string,
-    port: number
-}
-
-interface IDomain {
-  name: string,
-  uuid: string,
-  description?: string,
-  opts: any,
-  channels: Map<string, IChannel>
-  relays: IRelayServer[];
-}
-
-interface IChannel {
-  name: string,
-  uuid: string,
-  domain: IDomain,
-  version: string,
-  description?: string,
-  opts?: any,
-  subscribers: Set<any>, // set of sockets
-  relays: IRelayServer[];
-}
-
-interface IMessage {
-  uuid: string,
-  payload: any,
-  version: string,
-  channel: IChannel,
-  sent: number,
-  visitedRelays: string[]
-}
-
-let _lastError: any;
-let _domains  = new Map<string, IDomain>();
-let _channels = new Map<string, IChannel>();
 
 
 /****************************************************************************
@@ -90,145 +53,6 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
  **                                                                        **
  ****************************************************************************/
 
-function _processError(status: string, reason?: string, obj?: any) : PancakeError
-{
-  _lastError = new PancakeError(status, reason, obj);
-  log.trace(`SCREECH: ${status}: ${reason}`);
-  if (obj) log.trace(obj);
-  return _lastError;
-}
-
-
-function _getDomain(domainName: string) : IDomain
-{
-  let checkName = domainName;
-  if (checkName) {
-    return _domains.get(checkName.toLowerCase());
-  }
-  return;
-}
-
-
-function _isValidDomain(domainName: string) : boolean
-{
-  return _getDomain(domainName) ? true : false;
-}
-
-
-function _getChannel(domainName: string, channelName: string) : IChannel
-{
-  let domain = _getDomain(domainName);
-  if (domain) {
-    let checkChannelName = channelName;
-    if (checkChannelName) {
-      // Try the long-form name first
-      let channel = _channels.get(domain.name + '-' + checkChannelName.toLowerCase());
-      if (channel) return channel;
-
-      // Maybe channel is provided as a uuid?
-      return _channels.get(checkChannelName.toLowerCase());
-    }
-  }
-  return;
-}
-
-
-function _isValidChannel(domainName: string, channelName: string) : boolean
-{
-  return _getChannel(domainName, channelName) ? true : false;
-}
-
-
-function _createChannel(domainName: string, channelName: string, version: string, description?: string, opts?: any) : IChannel
-{
-  // Quick and dirty validation
-  let domain = _getDomain(domainName);
-  if (!domain) {
-    _processError('ERR_BAD_ARG', `Missing or invalid Domain name.`);
-    return;
-  }
-  if (!channelName) {
-    _processError('ERR_BAD_ARG', `Missing Channel name.`);
-    return;
-  }
-
-  // Pre-existing?
-  let existingChannel = _getChannel(domainName, channelName);
-  if (existingChannel) {
-    return existingChannel;
-  }
-
-  // Clean up and register
-  channelName = channelName.toLowerCase();
-  let newChannel: IChannel = {
-    name: channelName,
-    uuid: uuidv4(),
-    domain,
-    version,
-    description,
-    opts,
-    subscribers: new Set<any>(),
-    relays: []
-  }
-  _channels.set(domain.name + '-' + channelName, newChannel);
-  _channels.set(newChannel.uuid, newChannel);
-
-  return newChannel;
-}
-
-
-function _sendMessage(domainName: string, channelName: string, version: string, payload: any) : IMessage
-{
-  // Retrieve the channel
-  let channel = _getChannel(domainName, channelName);
-  if (!channel) {
-    _processError('ERR_BAD_CHANNEL', `Could not retrieve channel ('${domainName}-${channelName}')`);
-    return;
-  }
-
-  // Create the message
-  let message: IMessage = {
-    uuid: uuidv4(),
-    payload,
-    version,
-    channel,
-    sent: Date.now(),
-    visitedRelays: []
-  }
-  let subscriberMessage = _.pick(message, [
-    'uuid', 'payload', 'version', 'sent'
-  ]);
-  subscriberMessage.domain = channel.domain.uuid;
-  subscriberMessage.channel = channel.uuid;
-
-  // Send the messages to local subscribers
-  for (let socket of channel.subscribers) {
-    socket.emit('newMessage', subscriberMessage);
-  }
-
-  // TODO: Send message off to our relays
-
-  return message;
-}
-
-
-function _subscribeChannel(domainName: string, channelName: string, version: string, socket: any) : IChannel
-{
-  // Retrieve the channel
-  let channel = _getChannel(domainName, channelName);
-  if (!channel) {
-    _processError('ERR_BAD_CHANNEL', `Could not retrieve channel ('${domainName}-${channelName}')`);
-    return;
-  }
-
-  // Add this subscriber to the subscriber list
-  if (!channel.subscribers.has(socket)) {
-    channel.subscribers.add(socket);
-  }
-
-  return channel;
-}
-
 
 /****************************************************************************
  **                                                                        **
@@ -242,31 +66,13 @@ function _createDomain(payload: any) : IEndpointResponse
   let description = payload.description;
   let opts = payload.opts;
 
-  // Quick and dirty validation
-  if (!domainName) {
-    return { status: 400, result: _processError('ERR_BAD_ARG', `Domain name not specified.`) };
+  // Kick it off
+  let domain: IDomain = messaging.createDomain(domainName, description, opts);
+  if (!domain) {
+    return { status: 400, result: messaging.getLastError() };
   }
 
-  // Does this domain already exist?
-  domainName = domainName.toLowerCase();
-  let existingDomain = _domains.get(domainName);
-  if (existingDomain) {
-    return { status: 200, result: { reason: 'Domain already exists', uuid: existingDomain.uuid } };
-  }
-
-  // Clean up and register
-  let newDomain: IDomain = {
-    name: domainName,
-    uuid: uuidv4(),
-    description,
-    opts,
-    channels: new Map<string, IChannel>(),
-    relays: []
-  }
-  _domains.set(domainName, newDomain);
-  _domains.set(newDomain.uuid, newDomain);
-
-  return { status: 200, result: { reason: 'Domain successfully created', uuid: newDomain.uuid } };
+  return { status: 200, result: { reason: 'Domain successfully created', uuid: domain.uuid } };
 }
 
 
@@ -295,12 +101,13 @@ function _openChannel(payload: any) : IEndpointResponse
   let description = payload.description;
   let opts = payload.opts;
 
-  let newChannel = _createChannel(domainName, channelName, undefined, description, opts);
-  if (!newChannel) {
-    return { status: 400, result: getLastError() };
+  // Kick it off
+  let channel:IChannel = messaging.createChannel(domainName, channelName, undefined, description, opts);
+  if (!channel) {
+    return { status: 400, result: messaging.getLastError() };
   }
 
-  return { status: 200, result: { reason: 'Channel successfully opened', uuid: newChannel.uuid } };
+  return { status: 200, result: { reason: 'Channel successfully opened', uuid: channel.uuid } };
 }
 
 
@@ -329,9 +136,28 @@ function _send(payload: any) : IEndpointResponse
   let messagePayload = payload.payload;
 
   // Shoot it off
-  let message = _sendMessage(domainName, channelName, undefined, messagePayload);
+  let message: IMessage = messaging.send(domainName, channelName, undefined, messagePayload);
   if (!message) {
-    return { status: 400, result: getLastError() };
+    return { status: 400, result: messaging.getLastError() };
+  }
+
+  // All good
+  return { status: 200, result: {
+    reason: 'Message successfully sent.',
+    uuid: message.uuid,
+    domain: message.channel.domain.uuid,
+    channel: message.channel.uuid } };
+}
+
+
+function _sendToLast(payload: any) : IEndpointResponse
+{
+  let messagePayload = payload.payload;
+
+  // Shoot it off
+  let message: IMessage = messaging.sendToLast(messagePayload);
+  if (!message) {
+    return { status: 400, result: messaging.getLastError() };
   }
 
   // All good
@@ -349,9 +175,9 @@ function _subscribe(payload: any) : IEndpointResponse
   let domainName = payload.domain;
   let channelName = payload.channel;
 
-  let channel = _subscribeChannel(domainName, channelName, undefined, socket);
+  let channel: IChannel = messaging.subscribe(domainName, channelName, undefined, socket);
   if (!channel) {
-    return { status: 400, result: getLastError() };
+    return { status: 400, result: messaging.getLastError() };
   }
 
   return { status: 200, result: {
@@ -364,12 +190,6 @@ function _subscribe(payload: any) : IEndpointResponse
 function _clearStaleChannels(payload: any) : IEndpointResponse
 {
   return { status: 200 };
-}
-
-
-export function getLastError() : PancakeError
-{
-  return _lastError;
 }
 
 
@@ -390,5 +210,6 @@ export let flagpoleHandlers: IEndpointInfo[] = [
   { requestType: 'post',  path: '/screech/removechannelrelay', event: 'removeChannelRelay', handler: _removeChannelRelay },
   { requestType: 'get',   path: '/screech/clearstalechannels', event: 'clearStaleChannels', handler: _clearStaleChannels },
   { requestType: 'post',  path: '/screech/send',               event: 'send',               handler: _send },
+  { requestType: 'post',  path: '/screech/sendtolast',         event: 'sendToLast',         handler: _sendToLast },
   {                                                            event: 'subscribe',          handler: _subscribe }
 ];

@@ -143,7 +143,7 @@ export class Flagpole
     // Let the API know
     if (newAPI.apiHandler.initializeAPI) {
       log.trace(`FP: Calling API initializer`);
-      newAPI.apiHandler.initializeAPI(config, name, ver, apiToken, this._opts);
+      newAPI.apiHandler.initializeAPI(name, ver, apiToken, config, this._opts);
     }
     for (let transport of this._transports) {
       if (transport.registerAPI) {

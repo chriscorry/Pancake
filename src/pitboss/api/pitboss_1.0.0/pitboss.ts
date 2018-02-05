@@ -10,6 +10,10 @@ const  semver              = require('semver');
 import * as utils            from '../../../util/pancake-utils';
 import { PancakeError }      from '../../../util/pancake-err';
 import { Configuration }     from '../../../util/pancake-config';
+import { IDomain,
+         IChannel,
+         IMessage,
+         messaging }         from '../../../screech/messaging';
 import { IEndpointInfo,
          IEndpointResponse } from '../../../flagpole/apitypes';
 import { IServerInfo,
@@ -32,6 +36,8 @@ type UUID = string;
 const NOTARIZE_TIMEOUT    = 10*60; // 10 minutes
 const HEARTBEAT_INTERVAL  = 60; // 1 minute
 const HEARTBEAT_THRESHOLD = 3; // # allowed missed heartbeats
+const DOMAIN_NAME         = 'Pitboss';
+const CHANNEL_NAME        = 'ServerActivity';
 
 let _serversByUUID       = new Map<UUID,   IServerInfo>();
 let _serversBySocket     = new Map<any,    IServerInfo>();
@@ -63,6 +69,10 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
     _defaultStrategy.initialize(config);
   }
 
+  // Initialize our messaging service
+  messaging.createDomain(DOMAIN_NAME, 'Event notifications for important Pitboss events');
+  messaging.createChannel(DOMAIN_NAME, CHANNEL_NAME, undefined, 'Notifications about server comings and goings');
+
   // TODO load up strategies map from config data
 
   // Kick off timer
@@ -82,6 +92,7 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
 export function onDisconnect(socket: any) : PancakeError
 {
   _removeServerRegistration(_serversBySocket.get(socket));
+  messaging.unsubscribe(DOMAIN_NAME, CHANNEL_NAME, undefined, socket);
   return;
 }
 
@@ -134,6 +145,20 @@ function _removeServerRegistration(serverOrAddress: any, port?: number, silent: 
   if ('object' === typeof serverOrAddress && !port) {
     let server = serverOrAddress as IServerInfo;
 
+    // Let interested parties know
+    messaging.sendToLast({
+      event: 'disconnect',
+      server: _.pick(server, [
+        'name',
+        'description',
+        'pid',
+        'uuid',
+        'address',
+        'port',
+        'missedHeartbeats'
+      ])});
+
+    // Remove from collections
     _serversByUUID.delete(server.uuid);
     _serversBySocket.delete(server.socket);
     _pendingServers.delete(server.uuid);
@@ -176,6 +201,19 @@ function _clearStalePendingServers() : void
 
 function _addServerToRegistry(server: IServerInfo) : void
 {
+  // Let interested parties know
+  messaging.sendToLast({
+    event: 'connect',
+    server: _.pick(server, [
+      'name',
+      'description',
+      'pid',
+      'uuid',
+      'address',
+      'port',
+      'missedHeartbeats'
+    ])});
+
   // Make everything right
   _serversByUUID.set(server.uuid, server);
   _serversBySocket.set(server.socket, server);
@@ -514,6 +552,15 @@ function _onNotarize(payload: any) : IEndpointResponse
 }
 
 
+function _requestEvents(payload: any) : IEndpointResponse
+{
+  // Remember this guy
+  messaging.subscribe(DOMAIN_NAME, CHANNEL_NAME, undefined, payload.socket);
+  log.trace(`PITBOSS: Event listener subscription added.`);
+  return { status: 200, result: 'Event listener subscription added.'};
+}
+
+
 function getLastError() : PancakeError
 {
   return _lastError;
@@ -527,10 +574,11 @@ function getLastError() : PancakeError
  ****************************************************************************/
 
 export let flagpoleHandlers: IEndpointInfo[] = [
-  { requestType: 'post',  path: '/pitboss/register',    event: 'register',   handler: _registerServer,    metaTags: { audience: 'server' } },
-  { requestType: 'post',  path: '/pitboss/lookup',      event: 'lookup',     handler: _lookup             },
-  { requestType: 'get',   path: '/pitboss/server',      event: 'server',     handler: _getServerInfo      },
-  { requestType: 'get',   path: '/pitboss/servers',     event: 'servers',    handler: _getServerRegistry  },
-  { requestType: 'get',   path: '/pitboss/services',    event: 'services',   handler: _getServiceRegistry },
-  {                                                     event: 'notarize',   handler: _onNotarize,        metaTags: { audience: 'server' } }
+  { requestType: 'post',  path: '/pitboss/register', event: 'register',        handler: _registerServer,    metaTags: { audience: 'server' } },
+  { requestType: 'post',  path: '/pitboss/lookup',   event: 'lookup',          handler: _lookup             },
+  { requestType: 'get',   path: '/pitboss/server',   event: 'server',          handler: _getServerInfo      },
+  { requestType: 'get',   path: '/pitboss/servers',  event: 'servers',         handler: _getServerRegistry  },
+  { requestType: 'get',   path: '/pitboss/services', event: 'services',        handler: _getServiceRegistry },
+  {                                                  event: 'notarize',        handler: _onNotarize,        metaTags: { audience: 'server' } },
+  {                                                  event: 'subscribeEvents', handler: _requestEvents,        metaTags: { audience: 'tools' } }
 ];
