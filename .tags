@@ -86,3 +86,10 @@ descriptiveName	/Users/Chris/Dropbox/Tech/Projects/Pancake/src/pitboss/api/apico
 description	/Users/Chris/Dropbox/Tech/Projects/Pancake/src/pitboss/api/apiconfig.json	/^      "description": "Service clearinghouse and matchmaker.",$/;"	function	line:6
 versions	/Users/Chris/Dropbox/Tech/Projects/Pancake/src/pitboss/api/apiconfig.json	/^      "versions": [$/;"	function	line:7
 metaTags	/Users/Chris/Dropbox/Tech/Projects/Pancake/src/pitboss/api/apiconfig.json	/^      "metaTags": { "audience": ["server", "tools"] }$/;"	function	line:10
+HTML	/Users/Chris/Dropbox/Tech/Projects/Pancake/public/index.html	/^<HTML>$/;"	function	line:2
+HEAD	/Users/Chris/Dropbox/Tech/Projects/Pancake/public/index.html	/^<HEAD>$/;"	function	line:3
+META	/Users/Chris/Dropbox/Tech/Projects/Pancake/public/index.html	/^  <META charset="utf-8" \/>$/;"	function	line:4
+BODY	/Users/Chris/Dropbox/Tech/Projects/Pancake/public/index.html	/^<BODY>$/;"	function	line:6
+P	/Users/Chris/Dropbox/Tech/Projects/Pancake/public/index.html	/^  <P>$/;"	function	line:7
+SCRIPT	/Users/Chris/Dropbox/Tech/Projects/Pancake/public/index.html	/^    <SCRIPT src="\/socket.io\/socket.io.js"><\/SCRIPT>$/;"	function	line:10
+SCRIPT	/Users/Chris/Dropbox/Tech/Projects/Pancake/public/index.html	/^    <SCRIPT src="\/js"><\/SCRIPT>$/;"	function	line:11

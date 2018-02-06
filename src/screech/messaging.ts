@@ -18,11 +18,11 @@ const  log                 = utils.log;
  **                                                                        **
  ****************************************************************************/
 
-export interface IRelayServer {
-    uuid: string,
-    address: string,
-    port: number
-}
+// export interface IRelayServer {
+//     uuid: string,
+//     address: string,
+//     port: number
+// }
 
 export interface IDomain {
   name: string,
@@ -30,7 +30,7 @@ export interface IDomain {
   description?: string,
   opts: any,
   channels: Map<string, IChannel>
-  relays: IRelayServer[];
+  // relays: IRelayServer[];
 }
 
 export interface IChannel {
@@ -40,8 +40,8 @@ export interface IChannel {
   version: string,
   description?: string,
   opts?: any,
-  subscribers: Set<any>, // set of sockets
-  relays: IRelayServer[];
+  subscribers: Set<any> // set of sockets
+  // relays: IRelayServer[];
 }
 
 export interface IMessage {
@@ -49,8 +49,8 @@ export interface IMessage {
   payload: any,
   version: string,
   channel: IChannel,
-  sent: number,
-  visitedRelays: string[]
+  sent: number
+  // visitedRelays: string[]
 }
 
 
@@ -152,8 +152,8 @@ export class MessageEngine
       uuid: uuidv4(),
       description,
       opts,
-      channels: new Map<string, IChannel>(),
-      relays: []
+      channels: new Map<string, IChannel>()
+      // relays: []
     }
     this._domains.set(domainName, newDomain);
     this._domains.set(newDomain.uuid, newDomain);
@@ -162,13 +162,29 @@ export class MessageEngine
     return newDomain;
   }
 
-  /*
-  deleteDomain(payload: any) : IEndpointResponse
+
+  deleteDomain(domainName: string) : boolean
   {
-    return { status: 200 };
+    // Does this domain already exist?
+    domainName = domainName.toLowerCase();
+    let domain = this._domains.get(domainName);
+    if (domain) {
+
+      // Remove our channels first
+      while (domain.channels.size) {
+        this.deleteChannel(domain, domain.channels.entries().next().value[0]);
+      }
+
+      // ... and now the domain
+      this._domains.delete(domainName);
+      this._domains.delete(domain.uuid);
+      return true;
+    }
+    return false;
   }
 
 
+  /*
   function _addDomainRelay(payload: any) : IEndpointResponse
   {
     return { status: 200 };
@@ -210,14 +226,47 @@ export class MessageEngine
       version,
       description,
       opts,
-      subscribers: new Set<any>(),
-      relays: []
+      subscribers: new Set<any>()
+      // relays: []
     }
+    domain.channels.set(channelName, newChannel);
     this._channels.set(domain.name + '-' + channelName, newChannel);
     this._channels.set(newChannel.uuid, newChannel);
     this._lastChannel = newChannel;
 
     return newChannel;
+  }
+
+
+  deleteChannel(domainNameOrObj: any, channelName: string, version?: string) : boolean
+  {
+    // Extract our domain
+    let domain: IDomain;
+    let typeName = typeof domainNameOrObj;
+    if ('string' === typeName) {
+      let domainName = domainNameOrObj.toLowerCase();
+      domain = this._domains.get(domainName);
+    }
+    else if ('object' === typeName) {
+      domain = domainNameOrObj as IDomain;
+    }
+    if (!domain) {
+      return false;
+    }
+
+    // Make sure the channel exists
+    channelName = channelName.toLowerCase();
+    let channel = domain.channels.get(channelName);
+    if (!channel) {
+      return false;
+    }
+
+    // Now blow away all of our matching channels
+    domain.channels.delete(channelName);
+    this._channels.delete(domain.name + '-' + channelName);
+    this._channels.delete(channel.uuid);
+
+    return true;
   }
 
 
@@ -256,8 +305,8 @@ export class MessageEngine
       payload,
       version,
       channel,
-      sent: Date.now(),
-      visitedRelays: []
+      sent: Date.now()
+      // visitedRelays: []
     }
     let subscriberMessage = _.pick(message, [
       'uuid', 'payload', 'version', 'sent'

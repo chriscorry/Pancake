@@ -78,7 +78,11 @@ function _createDomain(payload: any) : IEndpointResponse
 
 function _deleteDomain(payload: any) : IEndpointResponse
 {
-  return { status: 200 };
+  let domainName = payload.name;
+  if (!messaging.deleteDomain(domainName)) {
+    return { status: 400, result: { reason: `Domain not found (${domainName})` } };
+  }
+  return { status: 200, result: { reason: `Domain successfully deleted (${domainName})` } };
 }
 
 
@@ -108,6 +112,17 @@ function _openChannel(payload: any) : IEndpointResponse
   }
 
   return { status: 200, result: { reason: 'Channel successfully opened', uuid: channel.uuid } };
+}
+
+
+function _deleteChannel(payload: any) : IEndpointResponse
+{
+  let domainName = payload.domain;
+  let channelName = payload.name;
+  if (!messaging.deleteChannel(domainName, channelName)) {
+    return { status: 400, result: { reason: `Channel not found (${domainName}, ${channelName})` } };
+  }
+  return { status: 200, result: { reason: `Channel successfully deleted (${domainName}, ${channelName})` } };
 }
 
 
@@ -202,13 +217,14 @@ function _clearStaleChannels(payload: any) : IEndpointResponse
 export let flagpoleHandlers: IEndpointInfo[] = [
   { requestType: 'post',  path: '/screech/createdomain',       event: 'createDomain',       handler: _createDomain },
   { requestType: 'post',  path: '/screech/deletedomain',       event: 'deleteDomain',       handler: _deleteDomain },
-  { requestType: 'post',  path: '/screech/adddomainrelay',     event: 'addDomainRelay',     handler: _addDomainRelay },
-  { requestType: 'post',  path: '/screech/removedomainrelay',  event: 'removeDomainRelay',  handler: _removeDomainRelay },
+  // { requestType: 'post',  path: '/screech/adddomainrelay',     event: 'addDomainRelay',     handler: _addDomainRelay },
+  // { requestType: 'post',  path: '/screech/removedomainrelay',  event: 'removeDomainRelay',  handler: _removeDomainRelay },
   { requestType: 'post',  path: '/screech/openchannel',        event: 'openChannel',        handler: _openChannel },
+  { requestType: 'post',  path: '/screech/deletechannel',      event: 'deleteChannel',      handler: _deleteChannel },
   { requestType: 'post',  path: '/screech/setchannelprops',    event: 'setChannelProps',    handler: _setChannelProperties },
-  { requestType: 'post',  path: '/screech/addchannelrelay',    event: 'addChannelRelay',    handler: _addChannelRelay },
-  { requestType: 'post',  path: '/screech/removechannelrelay', event: 'removeChannelRelay', handler: _removeChannelRelay },
-  { requestType: 'get',   path: '/screech/clearstalechannels', event: 'clearStaleChannels', handler: _clearStaleChannels },
+  // { requestType: 'post',  path: '/screech/addchannelrelay',    event: 'addChannelRelay',    handler: _addChannelRelay },
+  // { requestType: 'post',  path: '/screech/removechannelrelay', event: 'removeChannelRelay', handler: _removeChannelRelay },
+  // { requestType: 'get',   path: '/screech/clearstalechannels', event: 'clearStaleChannels', handler: _clearStaleChannels },
   { requestType: 'post',  path: '/screech/send',               event: 'send',               handler: _send },
   { requestType: 'post',  path: '/screech/sendtolast',         event: 'sendToLast',         handler: _sendToLast },
   {                                                            event: 'subscribe',          handler: _subscribe }
