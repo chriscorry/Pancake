@@ -68,7 +68,7 @@ export async function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
    ****************************************************************************/
 
   // Load up the main server config
-  let config = new Configuration(__dirname + '/../../config/serverconfig.json');
+  let config = new Configuration(__dirname + '/../../config/' + serverConfigFileName);
   log.info(`SYRUP: Logging level is ${log.levelAsString}`);
 
   // VARS

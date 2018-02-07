@@ -1,0 +1,11 @@
+{
+  "global": {
+    "LOG_LEVEL": "trace"
+  },
+  "test": {
+    "PORT": 4000
+  },
+  "development": {
+    "PORT": 4000
+  }
+}

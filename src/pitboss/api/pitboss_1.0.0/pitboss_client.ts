@@ -255,7 +255,8 @@ export function registerWithPitboss(name: string, description: string, port: num
     pid: process.pid,
     address: ip.address(),
     port,
-    services
+    services,
+    groups: config.get('PITBOSS_GROUPS')
   }
 
   // Do the real deal

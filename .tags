@@ -3,16 +3,6 @@ name	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/valet/api/apiconfig.json	/^
 descriptiveName	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/valet/api/apiconfig.json	/^      "descriptiveName": "Valet Caching API",$/;"	function	line:5
 description	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/valet/api/apiconfig.json	/^      "description": "Used for arbitrary blobs.",$/;"	function	line:6
 versions	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/valet/api/apiconfig.json	/^      "versions": [$/;"	function	line:7
-global	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^  "global": {$/;"	function	line:2
-JWT_SECRET	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^    "JWT_SECRET": "sjkhdsafk327678324687bjkbbb&^*&^bbdsdkbkdkb",$/;"	function	line:3
-LOG_LEVEL	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^    "LOG_LEVEL": "trace",$/;"	function	line:4
-USE_PITBOSS	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^    "USE_PITBOSS" : true,$/;"	function	line:5
-PITBOSS_SERVER	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^    "PITBOSS_SERVER" : "localhost",$/;"	function	line:6
-PITBOSS_PORT	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^    "PITBOSS_PORT" : 4000$/;"	function	line:7
-test	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^  "test": {$/;"	function	line:9
-PORT	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^    "PORT": 3000$/;"	function	line:10
-development	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^  "development": {$/;"	function	line:12
-PORT	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^    "PORT": 3000$/;"	function	line:13
 initializeAPI	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function initializeAPI(config) {$/;"	function	line:30
 initializeAPI	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function initializeAPI(config) {$/;"	function	line:30
 onConnect	/Users/Chris/Dropbox/Tech/Projects/Pancake/dist/pitboss/api/pitboss_1.0.0/pitboss_1.0.0.js	/^function onConnect(socket) {$/;"	function	line:40
@@ -93,3 +83,29 @@ BODY	/Users/Chris/Dropbox/Tech/Projects/Pancake/public/index.html	/^<BODY>$/;"	f
 P	/Users/Chris/Dropbox/Tech/Projects/Pancake/public/index.html	/^  <P>$/;"	function	line:7
 SCRIPT	/Users/Chris/Dropbox/Tech/Projects/Pancake/public/index.html	/^    <SCRIPT src="\/socket.io\/socket.io.js"><\/SCRIPT>$/;"	function	line:10
 SCRIPT	/Users/Chris/Dropbox/Tech/Projects/Pancake/public/index.html	/^    <SCRIPT src="\/js"><\/SCRIPT>$/;"	function	line:11
+global	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^  "global": {$/;"	function	line:2
+JWT_SECRET	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^    "JWT_SECRET": "sjkhdsafk327678324687bjkbbb&^*&^bbdsdkbkdkb",$/;"	function	line:3
+LOG_LEVEL	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^    "LOG_LEVEL": "trace",$/;"	function	line:4
+USE_PITBOSS	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^    "USE_PITBOSS" : true,$/;"	function	line:5
+PITBOSS_SERVER	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^    "PITBOSS_SERVER" : "localhost",$/;"	function	line:6
+PITBOSS_PORT	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^    "PITBOSS_PORT" : 4000$/;"	function	line:7
+test	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^  "test": {$/;"	function	line:9
+PORT	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^    "PORT": 3000$/;"	function	line:10
+development	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^  "development": {$/;"	function	line:12
+PORT	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/serverconfig.json	/^    "PORT": 3000$/;"	function	line:13
+global	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/pitboss_config.json	/^  "global": {$/;"	function	line:2
+LOG_LEVEL	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/pitboss_config.json	/^    "LOG_LEVEL": "trace"$/;"	function	line:3
+test	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/pitboss_config.json	/^  "test": {$/;"	function	line:5
+PORT	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/pitboss_config.json	/^    "PORT": 4000$/;"	function	line:6
+development	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/pitboss_config.json	/^  "development": {$/;"	function	line:8
+PORT	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/pitboss_config.json	/^    "PORT": 4000$/;"	function	line:9
+global	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/valet_config.json	/^  "global": {$/;"	function	line:2
+JWT_SECRET	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/valet_config.json	/^    "JWT_SECRET": "sjkhdsafk327678324687bjkbbb&^*&^bbdsdkbkdkb",$/;"	function	line:3
+LOG_LEVEL	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/valet_config.json	/^    "LOG_LEVEL": "trace",$/;"	function	line:4
+USE_PITBOSS	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/valet_config.json	/^    "USE_PITBOSS" : true,$/;"	function	line:5
+PITBOSS_SERVER	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/valet_config.json	/^    "PITBOSS_SERVER" : "localhost",$/;"	function	line:6
+PITBOSS_PORT	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/valet_config.json	/^    "PITBOSS_PORT" : 4000$/;"	function	line:7
+test	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/valet_config.json	/^  "test": {$/;"	function	line:9
+PORT	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/valet_config.json	/^    "PORT": 3000$/;"	function	line:10
+development	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/valet_config.json	/^  "development": {$/;"	function	line:12
+PORT	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/valet_config.json	/^    "PORT": 3000$/;"	function	line:13

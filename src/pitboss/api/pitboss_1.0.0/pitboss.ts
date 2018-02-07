@@ -18,6 +18,7 @@ import { IEndpointInfo,
          IEndpointResponse } from '../../../flagpole/apitypes';
 import { IServerInfo,
          IServiceInfo,
+         IGroupInfo,
          IBalanceStrategy }  from './pitboss_types';
 const  log                 = utils.log;
 
@@ -44,6 +45,7 @@ let _serversBySocket     = new Map<any,    IServerInfo>();
 let _servicesByName      = new Map<string, Set<IServerInfo>>();
 let _pendingServers      = new Map<UUID,   IServerInfo>();
 let _strategies          = new Map<string, IBalanceStrategy>();
+let _groups              = new Map<string, IGroupInfo>();
 let _maintenanceInterval = HEARTBEAT_INTERVAL * 1000;
 let _heartbeatThreshold  = HEARTBEAT_THRESHOLD;
 let _defaultStrategy: IBalanceStrategy;
@@ -158,6 +160,12 @@ function _removeServerRegistration(serverOrAddress: any, port?: number, silent: 
         'missedHeartbeats'
       ])});
 
+    // Remove from groups
+    while (server.groups.size) {
+      let group: IGroupInfo = server.groups.entries().next().value[0];
+      _removeServerFromGroupPriv(group.name, server.uuid);
+    }
+
     // Remove from collections
     _serversByUUID.delete(server.uuid);
     _serversBySocket.delete(server.socket);
@@ -221,6 +229,15 @@ function _addServerToRegistry(server: IServerInfo) : void
     _addServiceRegistration(name, server);
   });
   _pendingServers.delete(server.uuid);
+
+  // And finally process any pending group assignments
+  if (server.pendingGroups) {
+    server.pendingGroups.forEach((group: string) => {
+      _createGroupPriv(group);
+      _addServerToGroupPriv(group, server.uuid);
+    });
+    server.pendingGroups = undefined;
+  }
 }
 
 
@@ -314,12 +331,100 @@ function _performMaintenance() : void
 }
 
 
+function _createGroupPriv(name: string, description?: string) : PancakeError
+{
+  // Quick and dirty validation
+  if (!name) {
+    return _processError('ERR_BAD_ARG', `No group name provided in createGroup request.`);
+  }
+
+  // Does the group already exist?
+  let group: IGroupInfo = _groups.get(name.toLowerCase());
+  if (group) {
+    if (!group.description && description)
+      group.description = description;
+    return;
+  }
+
+  // Create a new group
+  let newGroup: IGroupInfo = {
+    name,
+    description,
+    members: new Set<IServerInfo>()
+  }
+  _groups.set(name.toLowerCase(), newGroup);
+
+  return;
+}
+
+
+function _addServerToGroupPriv(groupName: string, uuid: string) : PancakeError
+{
+  // Quick and dirty validation
+  if (!groupName || !uuid) {
+    return _processError('ERR_BAD_ARG', `Midding arguments in addServerToGroup request.`);
+  }
+  groupName = groupName.toLowerCase();
+
+  // Look up group
+  let group: IGroupInfo = _groups.get(groupName);
+  if (!group) {
+    return _processError('ERR_GROUP_NOT_FOUND', `No group exists with the name provided in addServerToGroup request ('${groupName}').`);
+  }
+
+  // Look up server
+  let server: IServerInfo = _serversByUUID.get(uuid.toLowerCase());
+  if (!server) {
+    return _processError('ERR_SERVER_NOT_FOUND', `No server exists with the identifier provided in addServerToGroup request ('${uuid}').`);
+  }
+
+  // Pop it on in
+  group.members.add(server);
+  server.groups.add(group);
+
+  return;
+}
+
+
+function _removeServerFromGroupPriv(groupName: string, uuid: string) : PancakeError
+{
+  // Quick and dirty validation
+  if (!groupName || !uuid) {
+    return _processError('ERR_BAD_ARG', `Midding arguments in removeServerFromGroup request.`);
+  }
+  groupName = groupName.toLowerCase();
+
+  // Look up group
+  let group: IGroupInfo = _groups.get(groupName);
+  if (!group) {
+    return _processError('ERR_GROUP_NOT_FOUND', `No group exists with the name provided in removeServerFromGroup request ('${groupName}').`);
+  }
+
+  // Look up server
+  let server: IServerInfo = _serversByUUID.get(uuid.toLowerCase());
+  if (!server) {
+    return _processError('ERR_SERVER_NOT_FOUND', `No server exists with the identifier provided in removeServerFromGroup request ('${uuid}').`);
+  }
+
+  // Pop it out
+  group.members.delete(server);
+  server.groups.delete(group);
+
+  return;
+}
+
+
 /****************************************************************************
  **                                                                        **
  ** Pitboss API                                                            **
  **                                                                        **
  ****************************************************************************/
 
+ /****************************************************************************
+  **                                                                        **
+  ** Registration                                                           **
+  **                                                                        **
+  ****************************************************************************/
 
 function _registerServer(payload: any) : IEndpointResponse
 {
@@ -333,7 +438,8 @@ function _registerServer(payload: any) : IEndpointResponse
     socket:           payload.socket,
     regTime:          Date.now(),
     missedHeartbeats: 0,
-    services:         new Map<string, IServiceInfo>()
+    services:         new Map<string, IServiceInfo>(),
+    groups:           new Set<IGroupInfo>()
   }
 
   // Quick and dirty validation
@@ -348,12 +454,17 @@ function _registerServer(payload: any) : IEndpointResponse
   if ((opts && opts.websocketRequired == false) || payload.socket) {
     requireWShandshake = false;
   }
+
+  // Start with groups -- if they're there, we defer until registration
+  if (payload.groups) {
+    newServer.pendingGroups = Array.isArray(payload.groups) ? payload.groups : [ payload.groups ];
+  }
+
+  // Now services
   let services = payload.services;
   if (!Array.isArray(services)) {
     services = [ services ];
   }
-
-  // Loop through our services
   let validService: boolean;
   for (let service of services) {
 
@@ -430,6 +541,42 @@ function _registerServer(payload: any) : IEndpointResponse
 }
 
 
+// function _onNotorize(payload: any) : IEndpointResponse
+// NOTE: websocket ONLY!
+// Takes a notarySig (UUID)
+// Returns SUCCESS or error code
+// Completes the server registration process. Servers are not placed into the
+// active pool until notarized.
+
+function _onNotarize(payload: any) : IEndpointResponse
+{
+  // Check args
+  _clearStalePendingServers();
+  let uuid = payload.notarySig;
+  if (!uuid) {
+    return { status: 400, result: _processError('ERR_BAD_ARG', `Missing signature uuid in notarize call`) };
+  }
+  let server = _pendingServers.get(uuid);
+  if (!server) {
+    return { status: 400, result: _processError('ERR_SERVER_NOT_FOUND', `Unknown server uuid in notarize call (notarize timeout?)`) };
+  }
+
+  // Remember the socket
+  server.socket = payload.socket;
+
+  // Make everything right
+  _addServerToRegistry(server);
+  log.trace(`PITBOSS: Server added to registry (${server.address}, ${server.port})`);
+  return { status: 200, result: 'Server notarized and added to Pitboss registry.' };
+}
+
+
+/****************************************************************************
+ **                                                                        **
+ ** Lookup & Query                                                         **
+ **                                                                        **
+ ****************************************************************************/
+
 // function _lookup(payload: any) : IEndpointResponse
 // Takes a service name, version, and optional array of key tuples (hints)
 // Returns a server info digest
@@ -448,7 +595,7 @@ function _lookup(payload: any) : IEndpointResponse
   if (!service) {
     return { status: 400, result: _processError('ERR_BAD_ARG', `No service name provided in lookup request.`) };
   }
-  service.toLowerCase();
+  service = service.toLowerCase();
 
   // Lookup our services
   let servers: Set<IServerInfo> = _servicesByName.get(service);
@@ -512,7 +659,7 @@ function _getServerInfo(payload: any) : IEndpointResponse
   if (!uuid) {
     return { status: 400, result: _processError('ERR_BAD_ARG', `Missing server uuid in getServerInfo call`) };
   }
-  let server = _serversByUUID.get(uuid);
+  let server = _serversByUUID.get(uuid.toLowerCase());
   if (!server) {
     return { status: 400, result: _processError('ERR_SERVER_NOT_FOUND', `Unknown server uuid in getServerInfo call`) };
   }
@@ -522,35 +669,11 @@ function _getServerInfo(payload: any) : IEndpointResponse
 }
 
 
-// function _onNotorize(payload: any) : IEndpointResponse
-// NOTE: websocket ONLY!
-// Takes a notarySig (UUID)
-// Returns SUCCESS or error code
-// Completes the server registration process. Servers are not placed into the
-// active pool until notarized.
-
-function _onNotarize(payload: any) : IEndpointResponse
-{
-  // Check args
-  _clearStalePendingServers();
-  let uuid = payload.notarySig;
-  if (!uuid) {
-    return { status: 400, result: _processError('ERR_BAD_ARG', `Missing signature uuid in notarize call`) };
-  }
-  let server = _pendingServers.get(uuid);
-  if (!server) {
-    return { status: 400, result: _processError('ERR_SERVER_NOT_FOUND', `Unknown server uuid in notarize call (notarize timeout?)`) };
-  }
-
-  // Remember the socket
-  server.socket = payload.socket;
-
-  // Make everything right
-  _addServerToRegistry(server);
-  log.trace(`PITBOSS: Server added to registry (${server.address}, ${server.port})`);
-  return { status: 200, result: 'Server notarized and added to Pitboss registry.'};
-}
-
+/****************************************************************************
+ **                                                                        **
+ ** Events                                                                 **
+ **                                                                        **
+ ****************************************************************************/
 
 function _requestEvents(payload: any) : IEndpointResponse
 {
@@ -560,6 +683,109 @@ function _requestEvents(payload: any) : IEndpointResponse
   return { status: 200, result: 'Event listener subscription added.'};
 }
 
+
+/****************************************************************************
+ **                                                                        **
+ ** Groups                                                                 **
+ **                                                                        **
+ ****************************************************************************/
+
+function _createGroup(payload: any) : IEndpointResponse
+{
+  let name = payload.name;
+  let description = payload.description;
+
+  // Pass it along
+  let err = _createGroupPriv(name, description);
+  if (err) {
+    return { status: 400, err };
+  }
+  return { status: 200, result: 'New group created.'};
+}
+
+
+function _deleteGroup(payload: any) : IEndpointResponse
+{
+  let name = payload.name;
+
+  // Quick and dirty validation
+  if (!name) {
+    return { status: 400, result: _processError('ERR_BAD_ARG', `No group name provided in deleteGroup request.`) };
+  }
+  name = name.toLowerCase();
+
+  // Look it up
+  let group: IGroupInfo = _groups.get(name);
+  if (!group) {
+    return { status: 400, result: _processError('ERR_GROUP_NOT_FOUND', `No group exists with the name provided in deleteGroup request ('${name}').`) };
+  }
+
+  // Blow it away
+  group.members.forEach((server: IServerInfo) => {
+    server.groups.delete(group);
+  });
+  _groups.delete(name);
+
+  return { status: 200, result: 'Group deleted.'};
+}
+
+
+function _addServerToGroup(payload: any) : IEndpointResponse
+{
+  let groupName = payload.group;
+  let uuid      = payload.uuid;
+
+  // Pass it on
+  let err = _addServerToGroupPriv(groupName, uuid);
+  if (err) {
+    return { status: 400, err };
+  }
+  return { status: 200, result: 'Server added to group.'};
+}
+
+
+function _removeServerFromGroup(payload: any) : IEndpointResponse
+{
+  let groupName = payload.group;
+  let uuid      = payload.uuid;
+
+  // Pass it on
+  let err = _removeServerFromGroupPriv(groupName, uuid);
+  if (err) {
+    return { status: 400, result: err };
+  }
+  return { status: 200, result: 'Server removed from group.'};
+}
+
+
+function _getGroups(payload: any) : IEndpointResponse
+{
+  let returnItems: any[] = [];
+  _groups.forEach((group: IGroupInfo, name: string) => {
+    let returnGroup = { name: group.name, description: group.description, members: new Array<any>() };
+    if (group.members.size) {
+      group.members.forEach((server: IServerInfo) => {
+        returnGroup.members.push(_.pick(server, [
+          'name',
+          'description',
+          'uuid',
+          'address',
+          'port'
+        ]));
+      });
+    }
+    returnItems.push(returnGroup);
+  })
+  log.trace(`PITBOSS: Returned group list.`);
+  return { status: 200, result: returnItems };
+}
+
+
+ /****************************************************************************
+  **                                                                        **
+  ** Misc                                                                   **
+  **                                                                        **
+  ****************************************************************************/
 
 function getLastError() : PancakeError
 {
@@ -574,11 +800,16 @@ function getLastError() : PancakeError
  ****************************************************************************/
 
 export let flagpoleHandlers: IEndpointInfo[] = [
-  { requestType: 'post',  path: '/pitboss/register', event: 'register',        handler: _registerServer,    metaTags: { audience: 'server' } },
-  { requestType: 'post',  path: '/pitboss/lookup',   event: 'lookup',          handler: _lookup             },
-  { requestType: 'get',   path: '/pitboss/server',   event: 'server',          handler: _getServerInfo      },
-  { requestType: 'get',   path: '/pitboss/servers',  event: 'servers',         handler: _getServerRegistry  },
-  { requestType: 'get',   path: '/pitboss/services', event: 'services',        handler: _getServiceRegistry },
-  {                                                  event: 'notarize',        handler: _onNotarize,        metaTags: { audience: 'server' } },
-  {                                                  event: 'subscribeEvents', handler: _requestEvents,        metaTags: { audience: 'tools' } }
+  { requestType: 'post',  path: '/pitboss/register',        event: 'register',        handler: _registerServer,    metaTags: { audience: 'server' } },
+  { requestType: 'post',  path: '/pitboss/lookup',          event: 'lookup',          handler: _lookup                },
+  { requestType: 'get',   path: '/pitboss/server',          event: 'server',          handler: _getServerInfo         },
+  { requestType: 'get',   path: '/pitboss/servers',         event: 'servers',         handler: _getServerRegistry     },
+  { requestType: 'get',   path: '/pitboss/services',        event: 'services',        handler: _getServiceRegistry    },
+  { requestType: 'post',  path: '/pitboss/creategroup',     event: 'createGroup',     handler: _createGroup           },
+  { requestType: 'post',  path: '/pitboss/deletegroup',     event: 'deleteGroup',     handler: _deleteGroup           },
+  { requestType: 'post',  path: '/pitboss/servertogroup',   event: 'serverToGroup',   handler: _addServerToGroup      },
+  { requestType: 'post',  path: '/pitboss/serverfromgroup', event: 'serverFromGroup', handler: _removeServerFromGroup },
+  { requestType: 'get',   path: '/pitboss/groups',          event: 'groups',          handler: _getGroups             },
+  {                                                         event: 'notarize',        handler: _onNotarize,        metaTags: { audience: 'server' } },
+  {                                                         event: 'subscribeEvents', handler: _requestEvents,     metaTags: { audience: 'tools' } }
 ];

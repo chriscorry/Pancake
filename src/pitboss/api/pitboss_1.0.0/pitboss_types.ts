@@ -37,5 +37,13 @@ export interface IServerInfo {
   socket:           any,
   regTime:          number,
   missedHeartbeats: number,
-  services:         Map<string, IServiceInfo>
+  services:         Map<string, IServiceInfo>,
+  pendingGroups?:   string[],
+  groups:           Set<IGroupInfo>
+}
+
+export interface IGroupInfo {
+  name: string,
+  description?: string,
+  members: Set<IServerInfo>
 }

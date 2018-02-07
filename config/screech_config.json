@@ -1,0 +1,18 @@
+{
+  "global": {
+    "JWT_SECRET": "sjkhdsafk327678324687bjkbbb&^*&^bbdsdkbkdkb",
+    "LOG_LEVEL": "trace",
+    "USE_PITBOSS" : true,
+    "PITBOSS_SERVER" : "localhost",
+    "PITBOSS_PORT" : 4000,
+    "PITBOSS_GROUPS": [
+      "DefaultRelays"
+    ]
+  },
+  "test": {
+    "PORT": 3000
+  },
+  "development": {
+    "PORT": 3000
+  }
+}
