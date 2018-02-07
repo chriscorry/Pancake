@@ -21,6 +21,18 @@ export function filterMap(map: Map<any, any>, test: Function) : Map<any, any>
 }
 
 
+export function filterSet(map: Set<any>, test: Function) : Set<any>
+{
+  let newSet = new Set();
+  map.forEach((value: any) => {
+    if (test(value)) {
+      newSet.add(value);
+    }
+  });
+  return newSet;
+}
+
+
 export function buildSafeFileName(fileName: string, safeRoot?: string) : string
 {
   if (!safeRoot) safeRoot = '';

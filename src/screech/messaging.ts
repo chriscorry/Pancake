@@ -232,6 +232,7 @@ export class MessageEngine
     domain.channels.set(channelName, newChannel);
     this._channels.set(domain.name + '-' + channelName, newChannel);
     this._channels.set(newChannel.uuid, newChannel);
+    this._lastDomain = domain;
     this._lastChannel = newChannel;
 
     return newChannel;
@@ -317,7 +318,7 @@ export class MessageEngine
     // Send the messages to local subscribers
     if (payload) {
       for (let socket of channel.subscribers) {
-        socket.emit(channel.name, subscriberMessage);
+        socket.emit(channel.domain.name + '-' + channel.name, subscriberMessage);
       }
     }
 
@@ -382,12 +383,12 @@ export class MessageEngine
   */
 
 
-  getLastError() : PancakeError
+  get lastError() : PancakeError
   {
     return this._lastError;
   }
 
-} // END MessageEngine
+} // END class MessageEngine
 
 
 // THE singleton
