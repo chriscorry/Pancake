@@ -240,7 +240,7 @@ export class ScreechClient extends EventEmitter
     channelName = channelName.toLowerCase();
     if (onMessage) {
       if (this._activeSubs.has([domainName, channelName])) {
-        this.on(channelName, onMessage);
+        this.on(domainName + '-' + channelName, onMessage);
         return;
       }
     }
@@ -262,7 +262,7 @@ export class ScreechClient extends EventEmitter
 
             // We only do these steps the first time (i.e., not on reconnects)
             if (onMessage) {
-              this.on(channelName, onMessage);
+              this.on(domainName + '-' + channelName, onMessage);
               this._activeSubs.add([domainName, channelName]);
             }
 
@@ -453,6 +453,16 @@ export class ScreechClient extends EventEmitter
             this._activeChannels = utils.filterSet(this._activeChannels, (value: [string, string, string, any]) => {
               if (value[0] === domainName && value[1] === channelName)
                 return false;
+              return true;
+            });
+
+            // ... and any subscriptions
+            this._activeSubs = utils.filterSet(this._activeSubs, (value: [string, string]) => {
+              if (value[0] === domainName && value[1] === channelName) {
+                this.removeAllListeners(domainName + '-' + channelName);
+                this._screechSocket.removeAllListeners(domainName + '-' + channelName);
+                return false;
+              }
               return true;
             });
 

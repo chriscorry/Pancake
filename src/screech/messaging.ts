@@ -383,6 +383,25 @@ export class MessageEngine
   */
 
 
+  getChannelRegistry() : any[]
+  {
+    let returnItems: any[] = [];
+
+    this._domains.forEach((domain: IDomain, domainName: string) => {
+      if (domainName != domain.uuid) {
+        let newDomain = { domain: domain.name, uuid: domain.uuid, description: domain.description, channels: new Array<any>() };
+        domain.channels.forEach((channel: IChannel, channelName: string) => {
+          if (channelName != channel.uuid) {
+            newDomain.channels.push({ channel: channel.name, uuid: channel.uuid, description: channel.description });
+          }
+        });
+        returnItems.push(newDomain);
+      }
+    });
+    return returnItems;
+  }
+
+
   get lastError() : PancakeError
   {
     return this._lastError;

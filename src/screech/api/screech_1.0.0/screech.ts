@@ -189,6 +189,12 @@ function _clearStaleChannels(payload: any) : IEndpointResponse
 }
 
 
+function _getRegistry(payload: any) : IEndpointResponse
+{
+  return { status: 200, result: messaging.getChannelRegistry() };
+}
+
+
 /****************************************************************************
  **                                                                        **
  ** Flagpole housekeeping                                                  **
@@ -206,6 +212,7 @@ export let flagpoleHandlers: IEndpointInfo[] = [
   // { requestType: 'post',  path: '/screech/addchannelrelay',    event: 'addChannelRelay',    handler: _addChannelRelay },
   // { requestType: 'post',  path: '/screech/removechannelrelay', event: 'removeChannelRelay', handler: _removeChannelRelay },
   // { requestType: 'get',   path: '/screech/clearstalechannels', event: 'clearStaleChannels', handler: _clearStaleChannels },
+  { requestType: 'get',   path: '/screech/getregistry',        event: 'getRegistry',        handler: _getRegistry },
   { requestType: 'post',  path: '/screech/send',               event: 'send',               handler: _send },
   {                                                            event: 'subscribe',          handler: _subscribe }
 ];

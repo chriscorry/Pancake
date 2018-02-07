@@ -15,6 +15,17 @@ async function createDomain(name: string, description?: string)
 }
 
 
+async function deleteDomain(name: string)
+{
+  let [err, resp] = await grab(screech.deleteDomain(name));
+  if (err || resp)
+    console.log(err, resp);
+  else {
+    console.log(`Successfully deleted domain '${name}'`);
+  }
+}
+
+
 async function openChannel(domain: string, name: string, description?: string)
 {
   let [err, resp] = await grab(screech.openChannel(domain, name, description));
@@ -22,6 +33,17 @@ async function openChannel(domain: string, name: string, description?: string)
     console.log(err, resp);
   else {
     console.log(`Successfully created channel '${name}'`);
+  }
+}
+
+
+async function deleteChannel(domain: string, name: string)
+{
+  let [err, resp] = await grab(screech.deleteChannel(domain, name));
+  if (err || resp)
+    console.log(err, resp);
+  else {
+    console.log(`Successfully deleted channel '${name}'`);
   }
 }
 
@@ -83,6 +105,9 @@ async function doIt()
   subscribe('Cars',    'BMW', messageCallback2);
   subscribe('Cars',    'Tesla', messageCallback1);
   subscribe('Cars',    'Mercedes', messageCallback2);
+
+  // deleteChannel('Animals', 'Cow');
+  // deleteDomain('Animals');
 }
 
 let screech = new ScreechClient();
