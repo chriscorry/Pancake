@@ -345,11 +345,23 @@ export class MessageEngine
 
   subscribe(domainName: string, channelName: string, version: string, socket: any) : IChannel
   {
+    // Quick and dirty validation
+    let domain = this._getDomain(domainName);
+    if (!domain) {
+      this._processError('ERR_BAD_ARG', `Missing or invalid Domain name.`);
+      return;
+    }
+
     // Retrieve the channel
     let channel = this._getChannel(domainName, channelName);
     if (!channel) {
-      this._processError('ERR_BAD_CHANNEL', `Could not retrieve channel ('${domainName}-${channelName}')`);
-      return;
+
+      // If the channel doesn't exist, we'll create it
+      channel = this.createChannel(domainName, channelName, undefined);
+      if (!channel) {
+        this._processError('ERR_BAD_CHANNEL', `Could not create channel '${channelName}'.`);
+        return;
+      }
     }
 
     // Add this subscriber to the subscriber list
@@ -372,6 +384,16 @@ export class MessageEngine
     channel.subscribers.delete(socket);
 
     return channel;
+  }
+
+
+  unsubscribeAll(socket: any) : void
+  {
+    if (socket) {
+      this._channels.forEach((channel: IChannel, name: string) => {
+        channel.subscribers.delete(socket);
+      });
+    }
   }
 
 

@@ -38,7 +38,10 @@ const NOTARIZE_TIMEOUT    = 10*60; // 10 minutes
 const HEARTBEAT_INTERVAL  = 60; // 1 minute
 const HEARTBEAT_THRESHOLD = 3; // # allowed missed heartbeats
 const DOMAIN_NAME         = 'Pitboss';
-const CHANNEL_NAME        = 'ServerActivity';
+const CHANNEL_ALL_SERVERS = 'ServerActivity';
+const CHANNEL_ALL_GROUPS  = 'GroupActivity';
+const ARG_ALL_SERVERS     = 'allservers';
+const ARG_ALL_GROUPS      = 'allgroups';
 
 let _serversByUUID       = new Map<UUID,   IServerInfo>();
 let _serversBySocket     = new Map<any,    IServerInfo>();
@@ -73,7 +76,8 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
 
   // Initialize our messaging service
   messaging.createDomain(DOMAIN_NAME, 'Event notifications for important Pitboss events');
-  messaging.createChannel(DOMAIN_NAME, CHANNEL_NAME, undefined, 'Notifications about server comings and goings');
+  messaging.createChannel(DOMAIN_NAME, CHANNEL_ALL_SERVERS, undefined, 'Notifications about all server comings and goings');
+  messaging.createChannel(DOMAIN_NAME, CHANNEL_ALL_GROUPS, undefined, 'Notifications about all group-related activity');
 
   // TODO load up strategies map from config data
 
@@ -94,7 +98,7 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
 export function onDisconnect(socket: any) : PancakeError
 {
   _removeServerRegistration(_serversBySocket.get(socket));
-  messaging.unsubscribe(DOMAIN_NAME, CHANNEL_NAME, undefined, socket);
+  messaging.unsubscribeAll(socket);
   return;
 }
 
@@ -148,8 +152,8 @@ function _removeServerRegistration(serverOrAddress: any, port?: number, silent: 
     let server = serverOrAddress as IServerInfo;
 
     // Let interested parties know
-    messaging.sendToLast({
-      event: 'disconnect',
+    messaging.send(DOMAIN_NAME, CHANNEL_ALL_SERVERS, undefined, {
+      event: 'Disconnect',
       server: _.pick(server, [
         'name',
         'description',
@@ -210,8 +214,8 @@ function _clearStalePendingServers() : void
 function _addServerToRegistry(server: IServerInfo) : void
 {
   // Let interested parties know
-  messaging.sendToLast({
-    event: 'connect',
+  messaging.send(DOMAIN_NAME, CHANNEL_ALL_SERVERS, undefined, {
+    event: 'Connect',
     server: _.pick(server, [
       'name',
       'description',
@@ -354,6 +358,15 @@ function _createGroupPriv(name: string, description?: string) : PancakeError
   }
   _groups.set(name.toLowerCase(), newGroup);
 
+  // Let interested folks know
+  let newGroupMsg = {
+    event: 'NewGroup',
+    name,
+    description
+  };
+  messaging.send(DOMAIN_NAME, name.toLowerCase(), undefined, newGroupMsg);
+  messaging.send(DOMAIN_NAME, CHANNEL_ALL_GROUPS, undefined, newGroupMsg);
+
   return;
 }
 
@@ -382,6 +395,22 @@ function _addServerToGroupPriv(groupName: string, uuid: string) : PancakeError
   group.members.add(server);
   server.groups.add(group);
 
+  // Let interested parties know
+  let joinMsg = {
+    event: 'JoinedGroup',
+    group: group.name,
+    server: _.pick(server, [
+      'name',
+      'description',
+      'pid',
+      'uuid',
+      'address',
+      'port',
+      'missedHeartbeats'
+    ])};
+  messaging.send(DOMAIN_NAME, group.name, undefined, joinMsg);
+  messaging.send(DOMAIN_NAME, CHANNEL_ALL_GROUPS, undefined, joinMsg);
+
   return;
 }
 
@@ -390,7 +419,7 @@ function _removeServerFromGroupPriv(groupName: string, uuid: string) : PancakeEr
 {
   // Quick and dirty validation
   if (!groupName || !uuid) {
-    return _processError('ERR_BAD_ARG', `Midding arguments in removeServerFromGroup request.`);
+    return _processError('ERR_BAD_ARG', `Missing arguments in removeServerFromGroup request.`);
   }
   groupName = groupName.toLowerCase();
 
@@ -409,6 +438,22 @@ function _removeServerFromGroupPriv(groupName: string, uuid: string) : PancakeEr
   // Pop it out
   group.members.delete(server);
   server.groups.delete(group);
+
+  // Let interested parties know
+  let leftMsg = {
+    event: 'LeftGroup',
+    group: group.name,
+    server: _.pick(server, [
+      'name',
+      'description',
+      'pid',
+      'uuid',
+      'address',
+      'port',
+      'missedHeartbeats'
+    ])};
+  messaging.send(DOMAIN_NAME, group.name, undefined, leftMsg);
+  messaging.send(DOMAIN_NAME, CHANNEL_ALL_GROUPS, undefined, leftMsg);
 
   return;
 }
@@ -675,12 +720,31 @@ function _getServerInfo(payload: any) : IEndpointResponse
  **                                                                        **
  ****************************************************************************/
 
-function _requestEvents(payload: any) : IEndpointResponse
+function _registerInterest(payload: any) : IEndpointResponse
 {
-  // Remember this guy
-  messaging.subscribe(DOMAIN_NAME, CHANNEL_NAME, undefined, payload.socket);
-  log.trace(`PITBOSS: Event listener subscription added.`);
-  return { status: 200, result: 'Event listener subscription added.'};
+  let target = payload.target ? payload.target.toLowerCase() : ARG_ALL_SERVERS;
+
+  switch(target) {
+
+    // Register for events about all servers coming and going
+    case ARG_ALL_SERVERS:
+      messaging.subscribe(DOMAIN_NAME, CHANNEL_ALL_SERVERS, undefined, payload.socket);
+      log.trace(`PITBOSS: Event subscription added for ALL SERVERS.`);
+      break;
+
+    // Register for events about all group activity
+    case ARG_ALL_GROUPS:
+      messaging.subscribe(DOMAIN_NAME, CHANNEL_ALL_GROUPS, undefined, payload.socket);
+      log.trace(`PITBOSS: Event subscription added for ALL GROUPS.`);
+      break;
+
+    // Otherwise, we assume this is a group name
+    default:
+      messaging.subscribe(DOMAIN_NAME, target, undefined, payload.socket);
+      log.trace(`PITBOSS: Event subscription added for group '${target}'.`);
+  }
+
+  return { status: 200, result: 'Event subscription added.'};
 }
 
 
@@ -725,6 +789,15 @@ function _deleteGroup(payload: any) : IEndpointResponse
     server.groups.delete(group);
   });
   _groups.delete(name);
+
+  // Let interested folks know
+  let deleteGroupMsg = {
+    event: 'DeleteGroup',
+    name
+  };
+  messaging.send(DOMAIN_NAME, name, undefined, deleteGroupMsg);
+  messaging.send(DOMAIN_NAME, CHANNEL_ALL_GROUPS, undefined, deleteGroupMsg);
+  messaging.deleteChannel(DOMAIN_NAME, name);
 
   return { status: 200, result: 'Group deleted.'};
 }
@@ -800,16 +873,16 @@ function getLastError() : PancakeError
  ****************************************************************************/
 
 export let flagpoleHandlers: IEndpointInfo[] = [
-  { requestType: 'post',  path: '/pitboss/register',        event: 'register',        handler: _registerServer,    metaTags: { audience: 'server' } },
-  { requestType: 'post',  path: '/pitboss/lookup',          event: 'lookup',          handler: _lookup                },
-  { requestType: 'get',   path: '/pitboss/server',          event: 'server',          handler: _getServerInfo         },
-  { requestType: 'get',   path: '/pitboss/servers',         event: 'servers',         handler: _getServerRegistry     },
-  { requestType: 'get',   path: '/pitboss/services',        event: 'services',        handler: _getServiceRegistry    },
-  { requestType: 'post',  path: '/pitboss/creategroup',     event: 'createGroup',     handler: _createGroup           },
-  { requestType: 'post',  path: '/pitboss/deletegroup',     event: 'deleteGroup',     handler: _deleteGroup           },
-  { requestType: 'post',  path: '/pitboss/servertogroup',   event: 'serverToGroup',   handler: _addServerToGroup      },
-  { requestType: 'post',  path: '/pitboss/serverfromgroup', event: 'serverFromGroup', handler: _removeServerFromGroup },
-  { requestType: 'get',   path: '/pitboss/groups',          event: 'groups',          handler: _getGroups             },
-  {                                                         event: 'notarize',        handler: _onNotarize,        metaTags: { audience: 'server' } },
-  {                                                         event: 'subscribeEvents', handler: _requestEvents,     metaTags: { audience: 'tools' } }
+  { requestType: 'post',  path: '/pitboss/register',        event: 'register',         handler: _registerServer,    metaTags: { audience: 'server' } },
+  { requestType: 'post',  path: '/pitboss/lookup',          event: 'lookup',           handler: _lookup                },
+  { requestType: 'get',   path: '/pitboss/server',          event: 'server',           handler: _getServerInfo         },
+  { requestType: 'get',   path: '/pitboss/servers',         event: 'servers',          handler: _getServerRegistry     },
+  { requestType: 'get',   path: '/pitboss/services',        event: 'services',         handler: _getServiceRegistry    },
+  { requestType: 'post',  path: '/pitboss/creategroup',     event: 'createGroup',      handler: _createGroup           },
+  { requestType: 'post',  path: '/pitboss/deletegroup',     event: 'deleteGroup',      handler: _deleteGroup           },
+  { requestType: 'post',  path: '/pitboss/servertogroup',   event: 'serverToGroup',    handler: _addServerToGroup      },
+  { requestType: 'post',  path: '/pitboss/serverfromgroup', event: 'serverFromGroup',  handler: _removeServerFromGroup },
+  { requestType: 'get',   path: '/pitboss/groups',          event: 'groups',           handler: _getGroups             },
+  {                                                         event: 'notarize',         handler: _onNotarize,        metaTags: { audience: 'server' } },
+  {                                                         event: 'registerInterest', handler: _registerInterest,  metaTags: { audience: 'tools' } }
 ];

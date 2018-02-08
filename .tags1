@@ -4,13 +4,3 @@
 !_TAG_PROGRAM_NAME	Exuberant Ctags	//
 !_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
 !_TAG_PROGRAM_VERSION	5.8	//
-global	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/valet_config.json	/^  "global": {$/;"	function	line:2
-JWT_SECRET	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/valet_config.json	/^    "JWT_SECRET": "sjkhdsafk327678324687bjkbbb&^*&^bbdsdkbkdkb",$/;"	function	line:3
-LOG_LEVEL	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/valet_config.json	/^    "LOG_LEVEL": "trace",$/;"	function	line:4
-USE_PITBOSS	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/valet_config.json	/^    "USE_PITBOSS" : true,$/;"	function	line:5
-PITBOSS_SERVER	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/valet_config.json	/^    "PITBOSS_SERVER" : "localhost",$/;"	function	line:6
-PITBOSS_PORT	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/valet_config.json	/^    "PITBOSS_PORT" : 4000$/;"	function	line:7
-test	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/valet_config.json	/^  "test": {$/;"	function	line:9
-PORT	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/valet_config.json	/^    "PORT": 3000$/;"	function	line:10
-development	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/valet_config.json	/^  "development": {$/;"	function	line:12
-PORT	/Users/Chris/Dropbox/Tech/Projects/Pancake/config/valet_config.json	/^    "PORT": 3000$/;"	function	line:13
