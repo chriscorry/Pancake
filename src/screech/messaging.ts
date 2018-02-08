@@ -76,11 +76,13 @@ export class MessageEngine
    **                                                                        **
    ****************************************************************************/
 
-  private _processError(status: string, reason?: string, obj?: any) : PancakeError
+  private _processError(status: string, reason?: string, obj?: any, logError: boolean = true) : PancakeError
   {
     this._lastError = new PancakeError(status, reason, obj);
-    log.trace(`SCREECH: ${status}: ${reason}`);
-    if (obj) log.trace(obj);
+    if (true === logError) {
+      log.trace(`SCREECH: ${status}: ${reason}`);
+      if (obj) log.trace(obj);
+    }
     return this._lastError;
   }
 
@@ -108,7 +110,7 @@ export class MessageEngine
       let checkChannelName = channelName;
       if (checkChannelName) {
         // Try the long-form name first
-        let channel = this._channels.get(domain.name + '-' + checkChannelName.toLowerCase());
+        let channel = this._channels.get(domain.name.toLowerCase() + '-' + checkChannelName.toLowerCase());
         if (channel) return channel;
 
         // Maybe channel is provided as a uuid?
@@ -291,12 +293,12 @@ export class MessageEngine
   */
 
 
-  send(domainName: string, channelName: string, version: string, payload: any) : IMessage
+  send(domainName: string, channelName: string, version: string, payload: any, logErrors: boolean = true) : IMessage
   {
     // Retrieve the channel
     let channel = this._getChannel(domainName, channelName);
     if (!channel) {
-      this._processError('ERR_BAD_CHANNEL', `Could not retrieve channel ('${domainName}-${channelName}')`);
+      this._processError('ERR_BAD_CHANNEL', `Could not retrieve channel ('${domainName}-${channelName}')`, undefined, logErrors);
       return;
     }
 

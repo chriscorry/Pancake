@@ -73,7 +73,7 @@ export class ScreechClient extends EventEmitter
   }
 
 
-  private _timeoutCallback(callback: Function)
+  private _timeoutCallback(callback: Function) : () => void
   {
     let called = false;
 
@@ -93,7 +93,18 @@ export class ScreechClient extends EventEmitter
   }
 
 
-  private _reconnect()
+  private _onDisconnect(socket: any) : void
+  {
+    // Let everyone know
+    this.emit('disconnect', socket);
+    log.info(`SCREECH: Lost connection to Screech server.`);
+
+    // Try again
+    this._initiateReconnects();
+  }
+
+
+  private _reconnect() : void
   {
     log.info('SCREECH: Trying to establish connection with Screech server.');
 
@@ -102,17 +113,7 @@ export class ScreechClient extends EventEmitter
   }
 
 
-  private _initiateReconnects()
-  {
-    this._cancelReconnects();
-    this._screechSocket = undefined;
-    this._connected = false;
-    this._reconnecting = true;
-    this._timerID = setTimeout(() => { this._reconnect(); }, this._reconnectInterval*1000);
-  }
-
-
-  private _cancelReconnects()
+  private _cancelReconnects() : void
   {
     if (this._timerID) {
       clearTimeout(this._timerID);
@@ -122,14 +123,13 @@ export class ScreechClient extends EventEmitter
   }
 
 
-  private _onDisconnect(socket: any)
+  private _initiateReconnects() : void
   {
-    // Let everyone know
-    log.info(`SCREECH: Lost connection to Screech server.`);
-    this.emit('disconnect');
-
-    // Try again
-    this._initiateReconnects();
+    this._cancelReconnects();
+    this._screechSocket = undefined;
+    this._connected = false;
+    this._reconnecting = true;
+    this._timerID = setTimeout(() => { this._reconnect(); }, this._reconnectInterval*1000);
   }
 
 

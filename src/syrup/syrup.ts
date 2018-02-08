@@ -9,7 +9,8 @@ import fs                from 'fs';
 import restify           = require('restify');
 import socketIO          = require('socket.io');
 
-import pitboss           = require('../pitboss/api/pitboss_1.0.0/pitboss_client');
+import { PitbossClient,
+         pitboss }       from '../pitboss/api/pitboss_1.0.0/pitboss_client';
 import { PancakeError }  from '../util/pancake-err';
 import { log }           from '../util/pancake-utils';
 import { Configuration } from '../util/pancake-config';
@@ -103,7 +104,7 @@ export async function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
   flagpole.initialize(serverRestify, serverSocketIO, {
     apiSearchDirs,
     envName: config.envName,
-    events: pitboss.events
+    events: pitboss
    });
 
 
@@ -146,7 +147,7 @@ export async function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
   }
   if (true === usePitboss) {
     log.info(`SYRUP: Registering with Pitboss...`);
-    pitboss.registerWithPitboss(serverName, undefined, port, config);
+    pitboss.registerWithServer(serverName, undefined, port, config);
   }
 
 

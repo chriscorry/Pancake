@@ -162,7 +162,7 @@ function _removeServerRegistration(serverOrAddress: any, port?: number, silent: 
         'address',
         'port',
         'missedHeartbeats'
-      ])});
+      ])}, false);
 
     // Remove from groups
     while (server.groups.size) {
@@ -224,7 +224,7 @@ function _addServerToRegistry(server: IServerInfo) : void
       'address',
       'port',
       'missedHeartbeats'
-    ])});
+    ])}, false);
 
   // Make everything right
   _serversByUUID.set(server.uuid, server);
@@ -364,8 +364,8 @@ function _createGroupPriv(name: string, description?: string) : PancakeError
     name,
     description
   };
-  messaging.send(DOMAIN_NAME, name.toLowerCase(), undefined, newGroupMsg);
-  messaging.send(DOMAIN_NAME, CHANNEL_ALL_GROUPS, undefined, newGroupMsg);
+  messaging.send(DOMAIN_NAME, name.toLowerCase(), undefined, newGroupMsg, false);
+  messaging.send(DOMAIN_NAME, CHANNEL_ALL_GROUPS, undefined, newGroupMsg, false);
 
   return;
 }
@@ -408,8 +408,8 @@ function _addServerToGroupPriv(groupName: string, uuid: string) : PancakeError
       'port',
       'missedHeartbeats'
     ])};
-  messaging.send(DOMAIN_NAME, group.name, undefined, joinMsg);
-  messaging.send(DOMAIN_NAME, CHANNEL_ALL_GROUPS, undefined, joinMsg);
+  messaging.send(DOMAIN_NAME, group.name, undefined, joinMsg, false);
+  messaging.send(DOMAIN_NAME, CHANNEL_ALL_GROUPS, undefined, joinMsg, false);
 
   return;
 }
@@ -452,8 +452,8 @@ function _removeServerFromGroupPriv(groupName: string, uuid: string) : PancakeEr
       'port',
       'missedHeartbeats'
     ])};
-  messaging.send(DOMAIN_NAME, group.name, undefined, leftMsg);
-  messaging.send(DOMAIN_NAME, CHANNEL_ALL_GROUPS, undefined, leftMsg);
+  messaging.send(DOMAIN_NAME, group.name, undefined, leftMsg, false);
+  messaging.send(DOMAIN_NAME, CHANNEL_ALL_GROUPS, undefined, leftMsg, false);
 
   return;
 }
@@ -795,8 +795,8 @@ function _deleteGroup(payload: any) : IEndpointResponse
     event: 'DeleteGroup',
     name
   };
-  messaging.send(DOMAIN_NAME, name, undefined, deleteGroupMsg);
-  messaging.send(DOMAIN_NAME, CHANNEL_ALL_GROUPS, undefined, deleteGroupMsg);
+  messaging.send(DOMAIN_NAME, name, undefined, deleteGroupMsg, false);
+  messaging.send(DOMAIN_NAME, CHANNEL_ALL_GROUPS, undefined, deleteGroupMsg, false);
   messaging.deleteChannel(DOMAIN_NAME, name);
 
   return { status: 200, result: 'Group deleted.'};
