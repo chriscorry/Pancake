@@ -43,25 +43,27 @@ export class ScreechClient extends ClientAPI
    **                                                                        **
    ****************************************************************************/
 
-  protected async _performReconnectTasks() : Promise<void>
+  protected async _performPostConnectTasks(reconnecting: boolean) : Promise<void>
   {
-    let waitArray: Promise<PancakeError>[] = [];
+    if (reconnecting) {
+      let waitArray: Promise<PancakeError>[] = [];
 
-    // Re-setup domains first, then channels, then subs
-    this._activeDomains.forEach((domain) => {
-      waitArray.push(this.createDomain.apply(this, domain));
-    });
-    await Promise.all(waitArray);
-    waitArray = [];
-    this._activeChannels.forEach((channel) => {
-      waitArray.push(this.openChannel.apply(this, channel));
-    });
-    await Promise.all(waitArray);
-    waitArray = [];
-    this._activeSubs.forEach((sub) => {
-      waitArray.push(this._subscribe.apply(this, sub));
-    });
-    await Promise.all(waitArray);
+      // Re-setup domains first, then channels, then subs
+      this._activeDomains.forEach((domain) => {
+        waitArray.push(this.createDomain.apply(this, domain));
+      });
+      await Promise.all(waitArray);
+      waitArray = [];
+      this._activeChannels.forEach((channel) => {
+        waitArray.push(this.openChannel.apply(this, channel));
+      });
+      await Promise.all(waitArray);
+      waitArray = [];
+      this._activeSubs.forEach((sub) => {
+        waitArray.push(this._subscribe.apply(this, sub));
+      });
+      await Promise.all(waitArray);
+    }
   }
 
 

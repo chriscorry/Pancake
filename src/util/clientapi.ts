@@ -106,12 +106,12 @@ export class ClientAPI extends EventEmitter
   }
 
 
-  private async _postRegistration(socket: any) : Promise<void>
+  private async _postConnect(socket: any) : Promise<void>
   {
     // Remember save off vitals
     this._socket = socket;
     this._connected = true;
-    let resubscribe = this._reconnecting;
+    let reconnecting = this._reconnecting;
 
     // Cancel any reconnect attempts
     this._cancelReconnects();
@@ -123,9 +123,7 @@ export class ClientAPI extends EventEmitter
     this.emit('connect');
 
     // Hook everything back up again
-    if (true === resubscribe) {
-      this._performReconnectTasks();
-    }
+    this._performPostConnectTasks(reconnecting);
   }
 
 
@@ -157,7 +155,7 @@ export class ClientAPI extends EventEmitter
               if (negotiateResp[0].status === 'SUCCESS') {
 
                 // We are connected
-                client._postRegistration(socketClient);
+                client._postConnect(socketClient);
                 resolve();
               }
               else if (true === logErrors) {
@@ -231,7 +229,7 @@ export class ClientAPI extends EventEmitter
    **                                                                        **
    ****************************************************************************/
 
-  protected _performReconnectTasks() : void
+  protected _performPostConnectTasks(reconnecting: boolean) : void
   {
     // Do nothing here in the base class
   }
