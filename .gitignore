@@ -3,6 +3,7 @@ backup/
 dist/
 .DS_Store
 *.map
+*.backup
 flagpole.bat
 syrup.bat
 valet.bat
