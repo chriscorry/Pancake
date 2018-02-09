@@ -42,12 +42,12 @@ export type DisconnectCallback = (socket:any) => void;
 
 export class ClientAPI extends EventEmitter
 {
-  private _baseURL: string;
   private _connected = false;
   private _reconnecting = false;
   private _reconnectInterval = RECONNECT_INTERVAL;
   private _timerID: NodeJS.Timer;
   private _lastError: any;
+  protected _baseURL: string;
   protected _socket: any;
 
   // Provided by subclasses
@@ -67,7 +67,7 @@ export class ClientAPI extends EventEmitter
   {
     // Let everyone know
     this.emit('disconnect', socket);
-    log.info(`${this._serviceNameUCase}: Lost connection to ${this._serviceName} server.`);
+    log.info(`${this._serviceNameUCase}: Lost connection to ${this._serviceName} server. Will attempt to reconnect in ${this._reconnectInterval} sec.`);
 
     // Try again
     this._initiateReconnects();
@@ -119,11 +119,11 @@ export class ClientAPI extends EventEmitter
     // Make sure we receive important notifications
     this._socket.on('disconnect', () => { this._onDisconnect(socket); });
 
-    // Let everyone know
-    this.emit('connect');
-
     // Hook everything back up again
     this._performPostConnectTasks(reconnecting);
+
+    // Let everyone know
+    this.emit('connect');
   }
 
 
@@ -223,6 +223,35 @@ export class ClientAPI extends EventEmitter
   }
 
 
+  protected async _baseConnect(address: string, port: number, onConnect: ListenerCallback = undefined, onDisconnect: DisconnectCallback = undefined) : Promise<PancakeError>
+  {
+    // Close up shop and cancel any reconnect attempts
+    if (this._socket) {
+      this._socket.close();
+      this._socket = undefined;
+      this._baseURL = '';
+    }
+    this._connected = false;
+    this._cancelReconnects();
+
+    // Clear out active domains, channels, and subscriptions
+    this._performConnectCleanup();
+
+    // Clear out old event handlers
+    this.removeAllListeners();
+
+    // Remember these callbacks
+    if (onConnect) this.on('connect', onConnect);
+    if (onDisconnect) this.on('disconnect', onDisconnect);
+
+    // Build our URL
+    this._baseURL = URL_HTTP + address + ':' + port;
+
+    // Kick it all off
+    return this._connect(true);
+  }
+
+
   /****************************************************************************
    **                                                                        **
    ** To override                                                            **
@@ -265,32 +294,16 @@ export class ClientAPI extends EventEmitter
    **                                                                        **
    ****************************************************************************/
 
-  async connect(address: string, port: number, onConnect: ListenerCallback = undefined, onDisconnect: DisconnectCallback = undefined) : Promise<PancakeError>
-  {
-    // Close up shop and cancel any reconnect attempts
-    if (this._socket) {
-      this._socket.close();
-      this._socket = undefined;
-    }
-    this._connected = false;
-    this._cancelReconnects();
-
-    // Clear out active domains, channels, and subscriptions
-    this._performConnectCleanup();
-
-    // Clear out old event handlers
-    this.removeAllListeners();
-
-    // Remember these callbacks
-    if (onConnect) this.on('connect', onConnect);
-    if (onDisconnect) this.on('disconnect', onDisconnect);
-
-    // Build our URL
-    this._baseURL = URL_HTTP + address + ':' + port;
-
-    // Kick it all off
-    return this._connect(true);
-  }
+  // NOTE ABOUT connect()
+  // Subclasses need to provide their own public connect() methods that
+  // re-direct to _baseConnect(). This allows subclasses to provide
+  // connect interfaces with different type signatures than class BaseClient
+  // requires.
+  //
+  // protected connect(...) : void
+  // {
+  //   super._baseConnect(...);
+  // }
 
 
   get lastError() : PancakeError

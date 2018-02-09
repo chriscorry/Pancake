@@ -4,10 +4,8 @@
  **                                                                        **
  ****************************************************************************/
 
-// import EventEmitter      = require('events');
-// import socketIOClient    = require('socket.io-client');
-
 import { ListenerCallback,
+         DisconnectCallback,
          ClientAPI }     from '../../../util/clientapi';
 import * as utils        from '../../../util/pancake-utils';
 import { PancakeError }  from '../../../util/pancake-err';
@@ -136,7 +134,7 @@ export class ScreechClient extends ClientAPI
 
   /****************************************************************************
    **                                                                        **
-   ** Public methods                                                         **
+   ** Constructor                                                            **
    **                                                                        **
    ****************************************************************************/
 
@@ -151,6 +149,12 @@ export class ScreechClient extends ClientAPI
    ** Public methods                                                         **
    **                                                                        **
    ****************************************************************************/
+
+  async connect(address: string, port: number, onConnect: ListenerCallback = undefined, onDisconnect: DisconnectCallback = undefined) : Promise<PancakeError>
+  {
+    return this._baseConnect(address, port, onConnect, onDisconnect);
+  }
+
 
   async createDomain(domainName: string, description: string, opts?: any) : Promise<PancakeError>
   {

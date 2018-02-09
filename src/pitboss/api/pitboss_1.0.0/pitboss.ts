@@ -181,7 +181,7 @@ function _removeServerRegistration(serverOrAddress: any, port?: number, silent: 
       }
     });
     if (false === silent) {
-      log.trace(`PITBOSS: Server removed from registry (${server.address}, ${server.port})`);
+      log.info(`PITBOSS: Server removed from registry (${server.uuid}, ${server.address}, ${server.port})`);
     }
   }
 
@@ -327,7 +327,7 @@ function _performMaintenance() : void
   // Unregister our missing servers
   for (let server of awolServers) {
     _removeServerRegistration(server);
-    log.trace(`PITBOSS: Removed AWOL server from registry (${server.address}, ${server.port})`);
+    log.warn(`PITBOSS: Removed AWOL server from registry (${server.uuid}, ${server.address}, ${server.port})`);
   }
 
   // Kick off the next one
@@ -574,7 +574,7 @@ function _registerServer(payload: any) : IEndpointResponse
   // No handshake required
   _removeServerRegistration(newServer.address, newServer.port, true);
   _addServerToRegistry(newServer);
-  log.trace(`PITBOSS: Server added to registry (${newServer.address}, ${newServer.port})`);
+  log.info(`PITBOSS: Server added to registry (${newServer.uuid}, ${newServer.address}, ${newServer.port})`);
   let resp = {
     status: 200,
     result: {
@@ -611,7 +611,7 @@ function _onNotarize(payload: any) : IEndpointResponse
 
   // Make everything right
   _addServerToRegistry(server);
-  log.trace(`PITBOSS: Server added to registry (${server.address}, ${server.port})`);
+  log.info(`PITBOSS: Server added to registry (${server.uuid}, ${server.address}, ${server.port})`);
   return { status: 200, result: 'Server notarized and added to Pitboss registry.' };
 }
 
