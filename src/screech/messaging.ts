@@ -314,8 +314,8 @@ export class MessageEngine
     let subscriberMessage = _.pick(message, [
       'uuid', 'payload', 'version', 'sent'
     ]);
-    subscriberMessage.domain = channel.domain.uuid;
-    subscriberMessage.channel = channel.uuid;
+    subscriberMessage.domain = channel.domain.name;
+    subscriberMessage.channel = channel.name;
 
     // Send the messages to local subscribers
     if (payload) {

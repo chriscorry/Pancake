@@ -391,6 +391,10 @@ function _addServerToGroupPriv(groupName: string, uuid: string) : PancakeError
     return _processError('ERR_SERVER_NOT_FOUND', `No server exists with the identifier provided in addServerToGroup request ('${uuid}').`);
   }
 
+  // Short-circuit
+  if (group.members.has(server) && server.groups.has(group))
+    return;
+
   // Pop it on in
   group.members.add(server);
   server.groups.add(group);
@@ -434,6 +438,10 @@ function _removeServerFromGroupPriv(groupName: string, uuid: string) : PancakeEr
   if (!server) {
     return _processError('ERR_SERVER_NOT_FOUND', `No server exists with the identifier provided in removeServerFromGroup request ('${uuid}').`);
   }
+
+  // Short-circuit
+  if (!group.members.has(server) && !server.groups.has(group))
+    return;
 
   // Pop it out
   group.members.delete(server);

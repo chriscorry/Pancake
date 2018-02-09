@@ -147,7 +147,7 @@ export async function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
   }
   if (true === usePitboss) {
     log.info(`SYRUP: Registering with Pitboss...`);
-    pitboss.connect(config, function connectOnce() {
+    pitboss.connectWithConfig(config, function connectOnce() {
       pitboss.registerWithServer(serverName, undefined, port);
       pitboss.removeListener('connect', connectOnce);
     });

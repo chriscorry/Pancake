@@ -21,8 +21,12 @@ import { flagpole }      from '../../../flagpole/flagpole';
  **                                                                        **
  ****************************************************************************/
 
- const URL_HTTP           = 'http://';
- const URL_HTTPS          = 'https://';
+ const URL_HTTP             = 'http://';
+ const URL_HTTPS            = 'https://';
+ const ARG_ALL_SERVERS      = 'allservers';
+ const ARG_ALL_GROUPS       = 'allgroups';
+ const MSG_NAME_ALL_SERVERS = 'pitboss-serveractivity';
+ const MSG_NAME_ALL_GROUPS  = 'pitboss-groupactivity';
 
 
 /****************************************************************************
@@ -140,7 +144,14 @@ export class PitbossClient extends ClientAPI
    **                                                                        **
    ****************************************************************************/
 
-   async connect(config?: Configuration, onConnect: ListenerCallback = undefined, onDisconnect: DisconnectCallback = undefined) : Promise<PancakeError>
+
+   async connect(address: string, port: number, onConnect: ListenerCallback = undefined, onDisconnect: DisconnectCallback = undefined) : Promise<PancakeError>
+   {
+      return this._baseConnect(address, port, onConnect, onDisconnect);
+   }
+
+
+   async connectWithConfig(config?: Configuration, onConnect: ListenerCallback = undefined, onDisconnect: DisconnectCallback = undefined) : Promise<PancakeError>
    {
     // Simple validation checks
     if (!config && !this._config) {
@@ -196,11 +207,68 @@ export class PitbossClient extends ClientAPI
       address: ip.address(),
       port,
       services,
-      groups: this._config.get('PITBOSS_GROUPS')
+      groups: this._config ? this._config.get('PITBOSS_GROUPS') : undefined
     }
 
     // Do the real deal
     this._registerWithServer();
+  }
+
+
+  async registerInterest(target: string, onMessage: ListenerCallback) : Promise<PancakeError>
+  {
+    // Simple validation checks
+    if (!this.connected) {
+      return this._processError('ERR_NO_CONNECTION', `PITBOSS: Not connected to server.`);
+    }
+
+    // Kick off the request
+    return new Promise<PancakeError>((resolve, reject) => {
+      this._socket.emit('pitboss:registerInterest', { target }, this._timeoutCallback((resp: any) => {
+
+        if (!(resp instanceof PancakeError)) {
+
+          // The server responded
+          if (200 === resp.status) {
+
+            target = target.toLowerCase();
+            switch(target) {
+
+              // Register for events about all servers coming and going
+              case ARG_ALL_SERVERS:
+                this.on(MSG_NAME_ALL_SERVERS, onMessage);
+                this._socket.on(MSG_NAME_ALL_SERVERS, (msg: any) => {
+                  this.emit(MSG_NAME_ALL_SERVERS, msg.payload);
+                });
+                break;
+
+              // Register for events about all group activity
+              case ARG_ALL_GROUPS:
+                this.on(MSG_NAME_ALL_GROUPS, onMessage);
+                this._socket.on(MSG_NAME_ALL_GROUPS, (msg: any) => {
+                  this.emit(MSG_NAME_ALL_GROUPS, msg.payload);
+                });
+                break;
+
+              // Otherwise, we assume this is a group name
+              default:
+                this.on('pitboss-' + target, onMessage);
+                this._socket.on('pitboss-' + target, (msg: any) => {
+                  this.emit('pitboss-' + target, msg.payload);
+                });
+            }
+            resolve();
+          }
+          else {
+            reject(resp.result);
+          }
+        }
+        else {
+          reject(resp as PancakeError);
+        }
+
+      }));
+    });
   }
 
 } // END class PitbossClient
