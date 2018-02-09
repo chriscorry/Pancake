@@ -18,19 +18,12 @@ const  log                 = utils.log;
  **                                                                        **
  ****************************************************************************/
 
-// export interface IRelayServer {
-//     uuid: string,
-//     address: string,
-//     port: number
-// }
-
 export interface IDomain {
   name: string,
   uuid: string,
   description?: string,
   opts: any,
   channels: Map<string, IChannel>
-  // relays: IRelayServer[];
 }
 
 export interface IChannel {
@@ -41,7 +34,6 @@ export interface IChannel {
   description?: string,
   opts?: any,
   subscribers: Set<any> // set of sockets
-  // relays: IRelayServer[];
 }
 
 export interface IMessage {
@@ -50,7 +42,6 @@ export interface IMessage {
   version: string,
   channel: IChannel,
   sent: number
-  // visitedRelays: string[]
 }
 
 
@@ -155,7 +146,6 @@ export class MessageEngine
       description,
       opts,
       channels: new Map<string, IChannel>()
-      // relays: []
     }
     this._domains.set(domainName, newDomain);
     this._domains.set(newDomain.uuid, newDomain);
@@ -184,20 +174,6 @@ export class MessageEngine
     }
     return false;
   }
-
-
-  /*
-  function _addDomainRelay(payload: any) : IEndpointResponse
-  {
-    return { status: 200 };
-  }
-
-
-  function _removeDomainRelay(payload: any) : IEndpointResponse
-  {
-    return { status: 200 };
-  }
-  */
 
 
   createChannel(domainName: string, channelName: string, version: string, description?: string, opts?: any) : IChannel
@@ -229,7 +205,6 @@ export class MessageEngine
       description,
       opts,
       subscribers: new Set<any>()
-      // relays: []
     }
     domain.channels.set(channelName, newChannel);
     this._channels.set(domain.name + '-' + channelName, newChannel);
@@ -278,18 +253,6 @@ export class MessageEngine
   {
     return { status: 200 };
   }
-
-
-  function _addChannelRelay(payload: any) : IEndpointResponse
-  {
-    return { status: 200 };
-  }
-
-
-  function _removeChannelRelay(payload: any) : IEndpointResponse
-  {
-    return { status: 200 };
-  }
   */
 
 
@@ -309,7 +272,6 @@ export class MessageEngine
       version,
       channel,
       sent: Date.now()
-      // visitedRelays: []
     }
     let subscriberMessage = _.pick(message, [
       'uuid', 'payload', 'version', 'sent'
@@ -323,8 +285,6 @@ export class MessageEngine
         socket.emit(channel.domain.name + '-' + channel.name, subscriberMessage);
       }
     }
-
-    // TODO: Send message off to our relays
 
     // Remember these params
     this._lastDomain = channel.domain;

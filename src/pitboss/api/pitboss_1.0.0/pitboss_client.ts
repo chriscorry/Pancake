@@ -27,6 +27,8 @@ import { flagpole }      from '../../../flagpole/flagpole';
  const ARG_ALL_GROUPS       = 'allgroups';
  const MSG_NAME_ALL_SERVERS = 'pitboss-serveractivity';
  const MSG_NAME_ALL_GROUPS  = 'pitboss-groupactivity';
+ const MSG_HEARTBEAT        = 'heartbeat';
+ const MSG_UUID             = 'serverUUID';
 
 
 /****************************************************************************
@@ -73,7 +75,7 @@ export class PitbossClient extends ClientAPI
   private _onHeartbeat(heartbeat: any, ack: Function) : void
   {
     // Let everyone know
-    this.emit('heartbeat');
+    this.emit(MSG_HEARTBEAT);
     log.trace('PITBOSS: Received heartbeat request. Responding.');
 
     // Respond
@@ -102,12 +104,12 @@ export class PitbossClient extends ClientAPI
                 // Successful registration
                 log.info(`PITBOSS: Server successfully registered with Pitboss. Server uuid = '${registerResp.result.uuid}'`);
                 this._server.uuid = registerResp.result.uuid;
-                this.emit('serverUUID', this._server.uuid);
+                this.emit(MSG_UUID, this._server.uuid);
                 this._registerCount = 0;
                 this._registered = true;
 
                 // Make sure we receive important notifications
-                this._socket.on('heartbeat', (heartbeat: any, ack: Function) => { this._onHeartbeat(heartbeat, ack); });
+                this._socket.on(MSG_HEARTBEAT, (heartbeat: any, ack: Function) => { this._onHeartbeat(heartbeat, ack); });
 
                 resolve();
               }
@@ -148,14 +150,14 @@ export class PitbossClient extends ClientAPI
    **                                                                        **
    ****************************************************************************/
 
-   async connect(address: string, port: number, onConnect: ListenerCallback = undefined, onDisconnect: DisconnectCallback = undefined) : Promise<PancakeError>
-   {
-      return this._baseConnect(address, port, onConnect, onDisconnect);
-   }
+  async connect(address: string, port: number, onConnect: ListenerCallback = undefined, onDisconnect: DisconnectCallback = undefined) : Promise<PancakeError>
+  {
+    return this._baseConnect(address, port, onConnect, onDisconnect);
+  }
 
 
-   async connectWithConfig(config?: Configuration, onConnect: ListenerCallback = undefined, onDisconnect: DisconnectCallback = undefined) : Promise<PancakeError>
-   {
+  async connectWithConfig(config?: Configuration, onConnect: ListenerCallback = undefined, onDisconnect: DisconnectCallback = undefined) : Promise<PancakeError>
+  {
     // Simple validation checks
     if (!config && !this._config) {
       return this._processError('ERR_NO_CONFIG', `PITBOSS: No configuration object.`);
@@ -179,13 +181,26 @@ export class PitbossClient extends ClientAPI
 
     // Clean up a bit
     if (this.connected) {
-      this._socket.removeAllListeners();
       this._server = undefined;
       this._registered = false;
     }
 
+    // Save off only certain listeners...
+    let heartbeatListeners = this.listeners(MSG_HEARTBEAT);
+    let uuidListeners      = this.listeners(MSG_UUID);
+
     // Do the real deal
-    return this._baseConnect(address, port, onConnect, onDisconnect);
+    let returnValue = this._baseConnect(address, port, onConnect, onDisconnect);
+
+    // Add our listeners back
+    for (let listener of heartbeatListeners) {
+      this.on(MSG_HEARTBEAT, listener as ListenerCallback);
+    }
+    for (let listener of uuidListeners) {
+      this.on(MSG_UUID, listener as ListenerCallback);
+    }
+
+    return returnValue;
   }
 
 

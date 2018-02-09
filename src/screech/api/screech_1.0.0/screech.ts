@@ -4,7 +4,10 @@
  **                                                                        **
  ****************************************************************************/
 
+import _                   = require('lodash');
+import { PitbossClient }     from '../../../pitboss/api/pitboss_1.0.0/pitboss_client';
 import * as utils            from '../../../util/pancake-utils';
+import { grab }              from '../../../util/pancake-grab';
 import { PancakeError }      from '../../../util/pancake-err';
 import { Configuration }     from '../../../util/pancake-config';
 import { IEndpointInfo,
@@ -22,6 +25,18 @@ const  log                 = utils.log;
  **                                                                        **
  ****************************************************************************/
 
+interface IRelayServer {
+     uuid: string,
+     address: string,
+     port: number
+}
+
+const RELAY_GROUP_NAME = 'DefaultRelays';
+
+let _pitboss: PitbossClient;
+let _uuid: string;
+let _relayServers = new Map<string, IRelayServer>();
+
 
 /****************************************************************************
  **                                                                        **
@@ -30,8 +45,13 @@ const  log                 = utils.log;
  ****************************************************************************/
 
 export function initializeAPI(name: string, ver: string, apiToken:string,
-                              config: Configuration) : void
+                              config: Configuration, opts: any) : void
 {
+  // We want to hear about registration events
+  if (opts.events) {
+    _pitboss = opts.events as PitbossClient;
+    _pitboss.on('serverUUID', (uuid) => { _onNewServerUUID(uuid); });
+  }
 }
 
 
@@ -52,6 +72,56 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
  ** Private functions                                                      **
  **                                                                        **
  ****************************************************************************/
+
+function _onRelayGroupChange(msg: any) : void
+{
+  switch(msg.event) {
+    case 'JoinedGroup':
+      if (msg.server.uuid != _uuid) {
+        _relayServers.set(msg.server.uuid, _.pick(msg.server, [
+          'name', 'uuid', 'address', 'port'
+        ]));
+        log.trace(`SCREECH: Added server '${msg.server.uuid}' to relay list.`);
+      }
+      break;
+    case 'LeftGroup':
+      if (msg.server.uuid != _uuid) {
+        _relayServers.delete(msg.server.uuid);
+      }
+      log.trace(`SCREECH: Removed server '${msg.server.uuid}' from relay list.`);
+      break;
+  }
+}
+
+
+async function _onNewServerUUID(uuid: string) : Promise<void>
+{
+  // Save off
+  _uuid = uuid;
+
+  // We want to receive notifications about the relay group
+  await grab(_pitboss.registerInterest(RELAY_GROUP_NAME, _onRelayGroupChange));
+
+  // Retrive our list of groups from the server
+  let [err, resp] = await grab(_pitboss.getGroups());
+  if (err) return;
+
+  // Process each server already in the groups
+  let relays = resp.find((group:any) => {
+    if (RELAY_GROUP_NAME === group.name)
+      return true;
+  })
+  if (relays && relays.members) {
+    relays.members.forEach((relay: any) => {
+      if (relay.uuid != _uuid) {
+        log.trace(`SCREECH: Added server '${relay.uuid}' to relay list.`);
+        _relayServers.set(relay.uuid, _.pick(relay, [
+          'name', 'uuid', 'address', 'port'
+        ]));
+      }
+    });
+  }
+}
 
 
 /****************************************************************************
