@@ -39,6 +39,7 @@ export class PitbossClient extends ClientAPI
 {
   private _server: any;
   private _uuidSave: string;
+  private _registered = false;
   private _registerCount = 0;
   private _config: Configuration;
 
@@ -51,9 +52,6 @@ export class PitbossClient extends ClientAPI
 
   protected _performPostConnectTasks(reconnecting: boolean) : void
   {
-    // Make sure we receive important notifications
-    this._socket.on('heartbeat', (heartbeat: any, ack: Function) => { this._onHeartbeat(heartbeat, ack); });
-
     // Automatically re-register ourself, if we've been registered before
     if (reconnecting && this._server) {
       this._registerWithServer();
@@ -61,9 +59,9 @@ export class PitbossClient extends ClientAPI
   }
 
 
-  protected _performConnectCleanup() : void
-  {
-  }
+  // protected _performConnectCleanup() : void
+  // {
+  // }
 
 
   /****************************************************************************
@@ -101,10 +99,16 @@ export class PitbossClient extends ClientAPI
             if (this._registerCount > 0) {
               if (200 === registerResp.status) {
 
+                // Successful registration
                 log.info(`PITBOSS: Server successfully registered with Pitboss. Server uuid = '${registerResp.result.uuid}'`);
                 this._server.uuid = registerResp.result.uuid;
                 this.emit('serverUUID', this._server.uuid);
                 this._registerCount = 0;
+                this._registered = true;
+
+                // Make sure we receive important notifications
+                this._socket.on('heartbeat', (heartbeat: any, ack: Function) => { this._onHeartbeat(heartbeat, ack); });
+
                 resolve();
               }
               else {
@@ -144,7 +148,6 @@ export class PitbossClient extends ClientAPI
    **                                                                        **
    ****************************************************************************/
 
-
    async connect(address: string, port: number, onConnect: ListenerCallback = undefined, onDisconnect: DisconnectCallback = undefined) : Promise<PancakeError>
    {
       return this._baseConnect(address, port, onConnect, onDisconnect);
@@ -158,25 +161,27 @@ export class PitbossClient extends ClientAPI
       return this._processError('ERR_NO_CONFIG', `PITBOSS: No configuration object.`);
     }
 
-    this._config = config;
-    this._uuidSave = this._server ? this._server.uuid : undefined;
-    let baseURLSave = this._baseURL;
-
-    // Clean up a bit
-    if (this.connected) {
-      this._socket.removeAllListeners();
-      this._server = undefined;
-    }
-
     // Extract our config values
     let address = config.get('PITBOSS_SERVER');
     let port = config.get('PITBOSS_PORT');
     if (!address || !port) {
       return this._processError('ERR_MISSING_CONFIG_INFO', 'PITBOSS: Could not find Pitboss server configuration info.');
     }
+
+    // Save off important values
+    this._config = config;
+    this._uuidSave = this._server ? this._server.uuid : undefined;
+    let baseURLSave = this._baseURL;
     let newURL = URL_HTTP + address + ':' + port;
     if (newURL != baseURLSave) {
       this._uuidSave = undefined;
+    }
+
+    // Clean up a bit
+    if (this.connected) {
+      this._socket.removeAllListeners();
+      this._server = undefined;
+      this._registered = false;
     }
 
     // Do the real deal
@@ -184,9 +189,15 @@ export class PitbossClient extends ClientAPI
   }
 
 
-  getServerUUID() : string
+  get server() : string
   {
     return this._server ? this._server.uuid : undefined;
+  }
+
+
+  get registered() : boolean
+  {
+    return this._registered;
   }
 
 
@@ -196,6 +207,10 @@ export class PitbossClient extends ClientAPI
     if (!this.connected) {
       return this._processError('ERR_NO_CONNECTION', `PITBOSS: Not connected to server.`);
     }
+
+    // Short circuit
+    if (this.registered)
+      return;
 
     // Build our initial registration request data
     let services = flagpole.queryAPIs();
@@ -286,12 +301,10 @@ export class PitbossClient extends ClientAPI
         if (!(resp instanceof PancakeError)) {
 
           // The server responded
-          if (200 === resp.status) {
+          if (200 === resp.status)
             resolve(resp.result);
-          }
-          else {
+          else
             reject(resp.result);
-          }
         }
         else {
           reject(resp as PancakeError);
