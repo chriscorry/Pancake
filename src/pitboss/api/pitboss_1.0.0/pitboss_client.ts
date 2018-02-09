@@ -271,6 +271,36 @@ export class PitbossClient extends ClientAPI
     });
   }
 
+  async getGroups() : Promise<any[]>
+  {
+    // Simple validation checks
+    if (!this.connected) {
+      this._processError('ERR_NO_CONNECTION', `PITBOSS: Not connected to server.`);
+      return;
+    }
+
+    // Kick off the request
+    return new Promise<any[]>((resolve, reject) => {
+      this._socket.emit('pitboss:groups', { }, this._timeoutCallback((resp: any) => {
+
+        if (!(resp instanceof PancakeError)) {
+
+          // The server responded
+          if (200 === resp.status) {
+            resolve(resp.result);
+          }
+          else {
+            reject(resp.result);
+          }
+        }
+        else {
+          reject(resp as PancakeError);
+        }
+
+      }));
+    });
+  }
+
 } // END class PitbossClient
 
 
