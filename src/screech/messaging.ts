@@ -256,6 +256,12 @@ export class MessageEngine
   */
 
 
+  emit(domainName: string, channelName: string, version: string, payload: any, logErrors: boolean = true) : IMessage
+  {
+      return this.send(domainName, channelName, version, payload, logErrors);
+  }
+
+
   send(domainName: string, channelName: string, version: string, payload: any, logErrors: boolean = true) : IMessage
   {
     // Retrieve the channel
@@ -302,6 +308,13 @@ export class MessageEngine
       return;
     }
     return this.send(this._lastDomain.name, this._lastChannel.name, this._lastVersion, payload);
+  }
+
+
+  on(domainName: string, channelName: string, version: string, socket: any) : IChannel
+  {
+    return this.subscribe(domainName, channelName, version, socket);
+
   }
 
 
