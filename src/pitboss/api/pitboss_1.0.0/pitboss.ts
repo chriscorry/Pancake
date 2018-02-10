@@ -887,9 +887,9 @@ export let flagpoleHandlers: IEndpointInfo[] = [
   { requestType: 'get',   path: '/pitboss/servers',         event: 'servers',          handler: _getServerRegistry     },
   { requestType: 'get',   path: '/pitboss/services',        event: 'services',         handler: _getServiceRegistry    },
   { requestType: 'post',  path: '/pitboss/creategroup',     event: 'createGroup',      handler: _createGroup           },
-  { requestType: 'post',  path: '/pitboss/deletegroup',     event: 'deleteGroup',      handler: _deleteGroup           },
+  { requestType: 'del',   path: '/pitboss/deletegroup',     event: 'deleteGroup',      handler: _deleteGroup           },
   { requestType: 'post',  path: '/pitboss/servertogroup',   event: 'serverToGroup',    handler: _addServerToGroup      },
-  { requestType: 'post',  path: '/pitboss/serverfromgroup', event: 'serverFromGroup',  handler: _removeServerFromGroup },
+  { requestType: 'del',   path: '/pitboss/serverfromgroup', event: 'serverFromGroup',  handler: _removeServerFromGroup },
   { requestType: 'get',   path: '/pitboss/groups',          event: 'groups',           handler: _getGroups             },
   {                                                         event: 'notarize',         handler: _onNotarize,        metaTags: { audience: 'server' } },
   {                                                         event: 'registerInterest', handler: _registerInterest,  metaTags: { audience: 'tools' } }
