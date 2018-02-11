@@ -102,7 +102,7 @@ export class TransportREST implements ITransport
               return next(err);
             }
           });
-          log.trace(`FP: Registered route (${endpointInfo.path}, ${ver})`);
+          // log.trace(`FP: Registered route (${endpointInfo.path}, ${ver})`);
         }
       }
       else {

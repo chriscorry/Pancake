@@ -291,7 +291,7 @@ export class TransportSocketIO extends EventEmitter implements ITransport
                 });
                 // END wrapper Function
 
-                log.trace(`FP: Registered socket event handler (${eventName}, v${ver})`);
+                // log.trace(`FP: Registered socket event handler (${eventName}, v${ver})`);
               }
             });
 
