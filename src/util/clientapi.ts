@@ -225,6 +225,23 @@ export class ClientAPI extends EventEmitter
 
   protected async _baseConnect(address: string, port: number, onConnect: ListenerCallback = undefined, onDisconnect: DisconnectCallback = undefined) : Promise<PancakeError>
   {
+    // Clean-up
+    this._baseClose();
+
+    // Remember these callbacks
+    if (onConnect) this.on('connect', onConnect);
+    if (onDisconnect) this.on('disconnect', onDisconnect);
+
+    // Build our URL
+    this._baseURL = URL_HTTP + address + ':' + port;
+
+    // Kick it all off
+    return this._connect(true);
+  }
+
+
+  protected _baseClose() : void
+  {
     // Close up shop and cancel any reconnect attempts
     if (this._socket) {
       this._socket.close();
@@ -239,16 +256,6 @@ export class ClientAPI extends EventEmitter
 
     // Clear out old event handlers
     this.removeAllListeners();
-
-    // Remember these callbacks
-    if (onConnect) this.on('connect', onConnect);
-    if (onDisconnect) this.on('disconnect', onDisconnect);
-
-    // Build our URL
-    this._baseURL = URL_HTTP + address + ':' + port;
-
-    // Kick it all off
-    return this._connect(true);
   }
 
 
@@ -294,17 +301,17 @@ export class ClientAPI extends EventEmitter
    **                                                                        **
    ****************************************************************************/
 
-  // NOTE ABOUT connect()
-  // Subclasses need to provide their own public connect() methods that
-  // re-direct to _baseConnect(). This allows subclasses to provide
-  // connect interfaces with different type signatures than class BaseClient
+  // NOTE ABOUT connect() & close()
+  // Subclasses need to provide their own public connect() and close() methods
+  // that re-direct to _baseConnect() & _baseClose(). This allows subclasses to
+  // provide interfaces with different type signatures than class BaseClient
   // requires.
   //
+  // EXAMPLE:
   // protected connect(...) : void
   // {
   //   super._baseConnect(...);
   // }
-
 
   get lastError() : PancakeError
   {

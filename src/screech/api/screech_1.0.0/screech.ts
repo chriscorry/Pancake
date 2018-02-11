@@ -6,6 +6,7 @@
 
 import _                   = require('lodash');
 import { PitbossClient }     from '../../../pitboss/api/pitboss_1.0.0/pitboss_client';
+import { ScreechClient }     from './screech_client';
 import * as utils            from '../../../util/pancake-utils';
 import { grab }              from '../../../util/pancake-grab';
 import { PancakeError }      from '../../../util/pancake-err';
@@ -28,7 +29,8 @@ const  log                 = utils.log;
 interface IRelayServer {
      uuid: string,
      address: string,
-     port: number
+     port: number,
+     client?: ScreechClient
 }
 
 const RELAY_GROUP_NAME = 'DefaultRelays';
@@ -78,15 +80,23 @@ function _onRelayGroupChange(msg: any) : void
   switch(msg.event) {
     case 'JoinedGroup':
       if (msg.server.uuid != _uuid) {
-        _relayServers.set(msg.server.uuid, _.pick(msg.server, [
+        let newRelay: IRelayServer = _.pick(msg.server, [
           'name', 'uuid', 'address', 'port'
-        ]));
+        ]);
+        newRelay.client = new ScreechClient();
+        newRelay.client.connect(newRelay.address, newRelay.port, undefined, undefined, true);
+        _relayServers.set(msg.server.uuid, newRelay);
         log.trace(`SCREECH: Added server '${msg.server.uuid}' to relay list.`);
       }
       break;
     case 'LeftGroup':
       if (msg.server.uuid != _uuid) {
-        _relayServers.delete(msg.server.uuid);
+        let relay = _relayServers.get(msg.server.uuid);
+        if (relay) {
+          relay.client.close();
+          relay.client = undefined;
+          _relayServers.delete(msg.server.uuid);
+        }
       }
       log.trace(`SCREECH: Removed server '${msg.server.uuid}' from relay list.`);
       break;
@@ -115,9 +125,12 @@ async function _onNewServerUUID(uuid: string) : Promise<void>
     relays.members.forEach((relay: any) => {
       if (relay.uuid != _uuid) {
         log.trace(`SCREECH: Added server '${relay.uuid}' to relay list.`);
-        _relayServers.set(relay.uuid, _.pick(relay, [
+        let newRelay: IRelayServer = _.pick(relay, [
           'name', 'uuid', 'address', 'port'
-        ]));
+        ]);
+        newRelay.client = new ScreechClient();
+        newRelay.client.connect(newRelay.address, newRelay.port, undefined, undefined, true);
+        _relayServers.set(relay.uuid, newRelay);
       }
     });
   }
@@ -135,6 +148,7 @@ function _createDomain(payload: any) : IEndpointResponse
   let domainName = payload.name;
   let description = payload.description;
   let opts = payload.opts;
+  let relay: boolean = payload.relay ? payload.relay : false;
 
   // Kick it off
   let domain: IDomain = messaging.createDomain(domainName, description, opts);
@@ -142,10 +156,18 @@ function _createDomain(payload: any) : IEndpointResponse
     return { status: 400, result: messaging.lastError };
   }
 
+  // Relay the request
+  if (!relay) {
+    _relayServers.forEach((relay: IRelayServer) => {
+      relay.client.createDomain(domainName, description, opts);
+    });
+  }
+
   return { status: 200, result: { reason: 'Domain successfully created', uuid: domain.uuid } };
 }
 
 
+// NOTE: deleteDomain requests are not relayed
 function _deleteDomain(payload: any) : IEndpointResponse
 {
   let domainName = payload.name;
@@ -174,6 +196,7 @@ function _openChannel(payload: any) : IEndpointResponse
   let channelName = payload.name;
   let description = payload.description;
   let opts = payload.opts;
+  let relay: boolean = payload.relay ? payload.relay : false;
 
   // Kick it off
   let channel:IChannel = messaging.createChannel(domainName, channelName, undefined, description, opts);
@@ -181,10 +204,18 @@ function _openChannel(payload: any) : IEndpointResponse
     return { status: 400, result: messaging.lastError };
   }
 
+  // Relay the request
+  if (!relay) {
+    _relayServers.forEach((relay: IRelayServer) => {
+      relay.client.openChannel(domainName, channelName, description, opts);
+    });
+  }
+
   return { status: 200, result: { reason: 'Channel successfully opened', uuid: channel.uuid } };
 }
 
 
+// NOTE: deleteChannel requests are not relayed
 function _deleteChannel(payload: any) : IEndpointResponse
 {
   let domainName = payload.domain;
@@ -219,22 +250,32 @@ function _send(payload: any) : IEndpointResponse
   let domainName = payload.domain;
   let channelName = payload.channel;
   let messagePayload = payload.payload;
+  let relay: boolean = payload.relay ? payload.relay : false;
 
   // Shoot it off
+  if (relay) messagePayload.relay = true;
   let message: IMessage = messaging.emit(domainName, channelName, undefined, messagePayload);
   if (!message) {
     return { status: 400, result: messaging.lastError };
+  }
+
+  // Relay the request
+  if (!relay) {
+    _relayServers.forEach((relay: IRelayServer) => {
+      relay.client.send(domainName, channelName, messagePayload);
+    });
   }
 
   // All good
   return { status: 200, result: {
     reason: 'Message successfully sent.',
     uuid: message.uuid,
-    domain: message.channel.domain.uuid,
-    channel: message.channel.uuid } };
+    domain: message.channel.domain.name,
+    channel: message.channel.name } };
 }
 
 
+// NOTE: subscribe requests are not relayed
 function _subscribe(payload: any) : IEndpointResponse
 {
   let socket = payload.socket;
@@ -248,8 +289,8 @@ function _subscribe(payload: any) : IEndpointResponse
 
   return { status: 200, result: {
       reason: 'Successfully subscribed to channel.',
-      domain: channel.domain.uuid,
-      channel: channel.uuid } };
+      domain: channel.domain.name,
+      channel: channel.name } };
 }
 
 
@@ -262,6 +303,18 @@ function _clearStaleChannels(payload: any) : IEndpointResponse
 function _getRegistry(payload: any) : IEndpointResponse
 {
   return { status: 200, result: messaging.getChannelRegistry() };
+}
+
+
+function _getRelays(payload: any) : IEndpointResponse
+{
+  let returnItems: any[] = [];
+  _relayServers.forEach((relay: IRelayServer) => {
+    returnItems.push(_.pick(relay, [
+      'name', 'uuid', 'address', 'port'
+    ]));
+  });
+  return { status: 200, result: returnItems };
 }
 
 
@@ -283,6 +336,7 @@ export let flagpoleHandlers: IEndpointInfo[] = [
   // { requestType: 'post',  path: '/screech/removechannelrelay', event: 'removeChannelRelay', handler: _removeChannelRelay },
   // { requestType: 'get',   path: '/screech/clearstalechannels', event: 'clearStaleChannels', handler: _clearStaleChannels },
   { requestType: 'get',   path: '/screech/getregistry',        event: 'getRegistry',        handler: _getRegistry },
+  { requestType: 'get',   path: '/screech/getrelays',          event: 'getRelays',          handler: _getRelays },
   { requestType: 'post',  path: '/screech/send',               event: 'send',               handler: _send },
   {                                                            event: 'subscribe',          handler: _subscribe }
 ];
