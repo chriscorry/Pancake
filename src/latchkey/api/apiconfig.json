@@ -1,0 +1,13 @@
+{
+  "apis": [
+    {
+      "name": "latchkey",
+      "descriptiveName": "Latchkey Authentication, Identity, and Authorization API",
+      "description": "User model and security services for the Pancake infrastructure.",
+      "versions": [
+        { "ver": "1.0.0", "fileName": "latchkey_1.0.0/latchkey.js" }
+      ],
+      "metaTags": { "audience": ["client", "server", "tools"] }
+    }
+  ]
+}

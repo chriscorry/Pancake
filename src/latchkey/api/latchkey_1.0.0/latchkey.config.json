@@ -1,0 +1,17 @@
+{
+  "global": {
+    "MAINTENANCE_INTERVAL": 300,
+    "MAX_CACHE_SIZE": 100000,
+    "MONGODB_DATABASE": "UserRegistry"
+  },
+  "development": {
+    "MAINTENANCE_INTERVAL": 60,
+    "MAX_CACHE_SIZE": 15,
+    "MONGODB_URI": "mongodb://localhost:27017/UserRegistry"
+  },
+  "test": {
+    "MAINTENANCE_INTERVAL": 60,
+    "MAX_CACHE_SIZE": 15,
+    "MONGODB_URI": "mongodb://localhost:27017/UserRegistryTest"
+  }
+}
