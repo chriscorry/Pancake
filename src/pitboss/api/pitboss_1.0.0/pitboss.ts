@@ -63,7 +63,7 @@ let _lastError: any;
  ****************************************************************************/
 
 export function initializeAPI(name: string, ver: string, apiToken:string,
-                              config: Configuration) : void
+                              config: Configuration) : PancakeError
 {
   _maintenanceInterval = (config ? config.get('HEARTBEAT_INTERVAL') : HEARTBEAT_INTERVAL)*1000;
   _heartbeatThreshold  = config ? config.get('HEARTBEAT_THRESHOLD') : HEARTBEAT_THRESHOLD;
@@ -86,6 +86,8 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
     clearTimeout(_timerID);
   }
   _timerID = setTimeout(_performMaintenance, _maintenanceInterval);
+
+  return;
 }
 
 
@@ -375,7 +377,7 @@ function _addServerToGroupPriv(groupName: string, uuid: string) : PancakeError
 {
   // Quick and dirty validation
   if (!groupName || !uuid) {
-    return _processError('ERR_BAD_ARG', `Midding arguments in addServerToGroup request.`);
+    return _processError('ERR_BAD_ARG', `Missing arguments in addServerToGroup request.`);
   }
   groupName = groupName.toLowerCase();
 
@@ -662,7 +664,7 @@ function _lookup(payload: any) : IEndpointResponse
     return { status: 400, result: _processError('ERR_SERVICE_NOT_FOUND', `Could not find requested service '${service}', v${version}.`) };
   }
 
-  // Just return potentially relevenat info
+  // Just return potentially relevant info
   let returnServer = _.pick(server, [
     'name',
     'description',

@@ -14,6 +14,7 @@ import { PitbossClient,
 import { PancakeError }  from '../util/pancake-err';
 import { log }           from '../util/pancake-utils';
 import { Configuration } from '../util/pancake-config';
+import { grab }          from '../util/pancake-grab';
 import { flagpole }      from '../flagpole/flagpole';
 
 
@@ -49,7 +50,7 @@ export async function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
   let syrupOpts         = opts || <SyrupOpts>{};
   let serverName:string = syrupOpts.name || process.env.SYRUP_SERVER_NAME || 'Syrup Test';
   let serverVer: string = syrupOpts.ver  || process.env.SYRUP_SERVER_VER  || '1.0.0';
-  let err: any;
+  let err: any, resp: any;
 
 
   /****************************************************************************
@@ -128,7 +129,9 @@ export async function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
   log.info(`SYRUP: Loading user APIs...`);
   err = flagpole.loadAPIConfig(configFile);
   if (err) {
-    log.warn(`SYRUP: No user API loaded. (${configFile})`);
+    log.error(err);
+    log.error('Exiting...');
+    process.exit(1);
   }
 
 

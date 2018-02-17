@@ -5,9 +5,10 @@
  ****************************************************************************/
 
 import _ = require('lodash');
-import * as util    from '../../../util/pancake-utils';
-import { grab }     from '../../../util/pancake-grab';
-import { flagpole } from '../../../flagpole/flagpole';
+import * as util             from '../../../util/pancake-utils';
+import { PancakeError }      from '../../../util/pancake-err';
+import { grab }              from '../../../util/pancake-grab';
+import { flagpole }          from '../../../flagpole/flagpole';
 const log = util.log;
 import { IEndpointInfo,
          IEndpointResponse } from '../../../flagpole/apitypes';
@@ -66,7 +67,7 @@ export function initializeAPI(name: string,
                               ver: string,
                               apiToken:string,
                               config: any,
-                              opts: any) : void
+                              opts: any) : PancakeError
 {
   _nameThisAPI       = name;
   _verThisAPI        = ver;
@@ -77,6 +78,8 @@ export function initializeAPI(name: string,
   if (opts.events) {
     opts.events.on('serverUUID', _onNewServerUUID);
   }
+
+  return;
 }
 
 

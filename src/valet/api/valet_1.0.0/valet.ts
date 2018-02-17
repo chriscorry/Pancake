@@ -6,6 +6,7 @@
 
 const  cache                  = require('../../cache');
 const  { SimpleMongoFactory } = require('./SimpleMongoFactory');
+import { PancakeError }      from '../../../util/pancake-err';
 import { grab }              from '../../../util/pancake-grab';
 import { Configuration }     from '../../../util/pancake-config';
 import { IEndpointInfo,
@@ -55,7 +56,7 @@ let IdentityFactory = {
 
 
 export function initializeAPI(name: string, ver: string, apiToken:string,
-                              config: Configuration) : void
+                              config: Configuration) : PancakeError
 {
   let maintenanceInterval: number = config ? config.get('MAINTENANCE_INTERVAL') : 60*5;
   let maxCacheSize: number        = config ? config.get('MAX_CACHE_SIZE') : 100;
@@ -67,6 +68,8 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
 
   // Fire up the cache
   cache.initialize({ maintenanceInterval, maxCacheSize });
+
+  return;
 }
 
 

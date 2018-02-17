@@ -54,6 +54,7 @@ interface _IApiInfo {
 export class Flagpole
 {
   // Member data
+  private _lastError: any;
   private _envName: string;
   private _apiSearchDirs: string[] = [];
   private _registeredAPIsByToken   = new Map<string, _IApiInfo>();
@@ -65,9 +66,20 @@ export class Flagpole
 
   /****************************************************************************
    **                                                                        **
-   ** PRIVATE _registerAPIDirect(...)                                        **
+   ** Private methods                                                        **
    **                                                                        **
    ****************************************************************************/
+
+  private _processError(status: string, reason?: string, obj?: any, logError: boolean = true) : PancakeError
+  {
+    this._lastError = new PancakeError(status, reason, obj);
+    if (true === logError) {
+      log.trace(`FP: ${status}: ${reason}`);
+      if (obj) log.trace(obj);
+    }
+    return this._lastError;
+  }
+
 
   private _registerAPIDirect(name:            string,
                              description:     string,        // opt
@@ -79,18 +91,15 @@ export class Flagpole
   {
     // Simple validation
     if (!this._transports.length) {
-      log.trace('FP: ERR_TRANSPORT_NOT_INIT');
-      return new PancakeError('ERR_TRANSPORT_NOT_INIT');
+      return this._processError('ERR_TRANSPORT_NOT_INIT');
     }
     if (!name || !ver || !apiHandler) {
-      log.trace('FP: ERR_BAD_ARG');
-      return new PancakeError('ERR_BAD_ARG');
+      return this._processError('ERR_BAD_ARG');
     }
 
     // Validate version format
     if (!semver.valid(ver)) {
-      log.trace('FP: ERR_BAD_ARG: Invalid version format');
-      return new PancakeError('ERR_BAD_ARG', 'Invalid version format');
+      return this._processError('ERR_BAD_ARG', 'Invalid version format');
     }
     ver = semver.clean(ver);
 
@@ -132,8 +141,7 @@ export class Flagpole
       if (error instanceof PancakeError) {
         return error;
       }
-      log.trace(`FP: ERR_REGISTER_ROUTE: Could not register route: "${endpointInfo.requestType}", "${endpointInfo.path}", ${newAPI.ver}`);
-      return new PancakeError('ERR_REGISTER_ROUTE', `Could not register route: "${endpointInfo.requestType}", "${endpointInfo.path}", ${newAPI.ver}`, error);
+      return this._processError('ERR_REGISTER_ROUTE', `Could not register route: "${endpointInfo.requestType}", "${endpointInfo.path}", ${newAPI.ver}`, error);
     }
 
     // Add to the main API collection
@@ -143,21 +151,21 @@ export class Flagpole
     // Let the API know
     if (newAPI.apiHandler.initializeAPI) {
       log.trace(`FP: Calling API initializer`);
-      newAPI.apiHandler.initializeAPI(name, ver, apiToken, config, this._opts);
+      let err = newAPI.apiHandler.initializeAPI(name, ver, apiToken, config, this._opts);
+      if (err) {
+        return this._processError('ERR_INIT_API', `Encountered fatal error initializing API "${name}"`, err);
+      }
     }
     for (let transport of this._transports) {
       if (transport.registerAPI) {
-        transport.registerAPI(newAPI.apiHandler);
+        let err = transport.registerAPI(newAPI.apiHandler);
+        if (err) {
+          return this._processError('ERR_INIT_API', `Enountered fatal error initializing transport for API "${name}"`, err);
+        }
       }
     }
   }
 
-
-  /****************************************************************************
-   **                                                                        **
-   ** PRIVATE _registerAPIFromFile(...)                                      **
-   **                                                                        **
-   ****************************************************************************/
 
   private _registerAPIFromFile(name: string,
                                description: string,
@@ -167,12 +175,10 @@ export class Flagpole
   {
     // Simple validation
     if (!this._transports.length) {
-      log.trace('FP: ERR_TRANSPORT_NOT_INIT');
-      return new PancakeError('ERR_TRANSPORT_NOT_INIT');
+      return this._processError('ERR_TRANSPORT_NOT_INIT');
     }
     if (!name || !ver) {
-      log.trace(`FP: ERR_BAD_ARG`);
-      return new PancakeError('ERR_BAD_ARG');
+      return this._processError('ERR_BAD_ARG');
     }
 
     // Try to load up the file
@@ -199,7 +205,8 @@ export class Flagpole
           err = this._registerAPIDirect(name, description, ver, newAPI, safeFileName, config, opts);
 
         // Swallow the exception
-        } catch(error) {
+        }
+        catch(error) {
           err = error;
         }
         return true;
@@ -208,17 +215,10 @@ export class Flagpole
 
     // No dice
     if (!newAPI) {
-      log.trace(`FP: ERR_FILE_LOAD: Could not load API file ${fileName}`, err);
-      return new PancakeError('ERR_FILE_LOAD', `Could not load API file ${fileName}`, err);
+      return this._processError('ERR_FILE_LOAD', `Could not load API file ${fileName}`, err);
     }
   }
 
-
-  /****************************************************************************
-   **                                                                        **
-   ** PRIVATE _unregisterAPIInfo(...)                                        **
-   **                                                                        **
-   ****************************************************************************/
 
   private _unregisterAPIInfo(apiUnregInfo: _IApiInfo) : void
   {
@@ -232,12 +232,6 @@ export class Flagpole
     });
   }
 
-
-  /****************************************************************************
-   **                                                                        **
-   ** PRIVATE _unregisterAllAPIs(...)                                        **
-   **                                                                        **
-   ****************************************************************************/
 
   private _unregisterAllAPIs() : void
   {
@@ -274,7 +268,7 @@ export class Flagpole
 
   /****************************************************************************
    **                                                                        **
-   ** PUBLIC init(server: Required, Restify server instance)                 **
+   ** Public methods                                                         **
    **                                                                        **
    ****************************************************************************/
 
@@ -311,12 +305,6 @@ export class Flagpole
   }
 
 
-  /****************************************************************************
-   **                                                                        **
-   ** PUBLIC registerAPI(...)                                                **
-   **                                                                        **
-   ****************************************************************************/
-
   registerAPI(name: string,
               description: string,
               ver: string,
@@ -330,15 +318,9 @@ export class Flagpole
     else if (typePathOrHandler === 'string'){
       return this._registerAPIFromFile(name, description, ver, pathOrHandler, opts);
     }
-    return new PancakeError('ERR_BAD_ARG', 'FP: Must provide filename or handler to registerAPI.');
+    return this._processError('ERR_BAD_ARG', 'FP: Must provide filename or handler to registerAPI.');
   }
 
-
-  /****************************************************************************
-   **                                                                        **
-   ** PUBLIC unregisterAPI(...)                                              **
-   **                                                                        **
-   ****************************************************************************/
 
   unregisterAPI(nameOrToken: string, ver?: string) : PancakeError
   {
@@ -346,8 +328,7 @@ export class Flagpole
 
     // Simple validation
     if (!this._transports.length) {
-      log.trace('FP: ERR_TRANSPORT_NOT_INIT');
-      return new PancakeError('ERR_TRANSPORT_NOT_INIT');
+      return this._processError('ERR_TRANSPORT_NOT_INIT');
     }
 
     // No args means wipe them all out
@@ -402,8 +383,7 @@ export class Flagpole
 
     // Was it found?
     if (!found) {
-      log.trace(`FP: ERR_API_NOT_FOUND: Could not find API (${nameOrToken}, ${ver}) to unregister.`);
-      return new PancakeError('ERR_API_NOT_FOUND');
+      return this._processError('ERR_API_NOT_FOUND');
     }
     else {
       log.trace(`FP: API (${nameOrToken}, ${ver}) successfully unregistered.`);
@@ -411,27 +391,20 @@ export class Flagpole
   }
 
 
-  /****************************************************************************
-   **                                                                        **
-   ** PUBLIC loadAPIConfig(...)                                              **
-   **                                                                        **
-   ****************************************************************************/
-
   loadAPIConfig(configFile: string) : PancakeError
   {
+    let err: any;
+
     // Simple validation
     if (!this._transports.length) {
-      log.trace('FP: ERR_TRANSPORT_NOT_INIT');
-      return new PancakeError('ERR_TRANSPORT_NOT_INIT');
+      return this._processError('ERR_TRANSPORT_NOT_INIT');
     }
     if (!configFile) {
-      log.trace(`FP: ERR_NO_CONFIG_FILE`);
-      return new PancakeError('ERR_NO_CONFIG_FILE');
+      return this._processError('ERR_NO_CONFIG_FILE');
     }
 
     // Load up the file
     let config: any;
-    let err: any;
     let safeFileName: string;
     this._apiSearchDirs.find((apiDir: string) => {
 
@@ -448,9 +421,7 @@ export class Flagpole
       }
     });
     if (!config) {
-      log.trace(`FP: ERR_FILE_LOAD: Could not load API config file (${configFile})`);
-      if (err) log.trace(err);
-      return new PancakeError('ERR_FILE_LOAD', `Could not load API config file (${configFile})`, err);
+      return this._processError('ERR_FILE_LOAD', `Could not load API config file (${configFile})`, err);
     }
 
     // Now process the config data
@@ -469,19 +440,12 @@ export class Flagpole
         }
       });
     } catch(error) {
-      log.trace(`FP: ERR_CONFIG: Could not process config file.`);
-      log.trace(error);
-      return new PancakeError('ERR_CONFIG', 'Could not process config file.', error);
+      return this._processError('ERR_CONFIG', 'Could not process config file.', error);
     }
+
     return err;
   }
 
-
-  /****************************************************************************
-   **                                                                        **
-   ** PUBLIC queryAPIs(...)                                                  **
-   **                                                                        **
-   ****************************************************************************/
 
   queryAPIs() : any[]
   {

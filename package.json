@@ -20,14 +20,18 @@
     "@types/socket.io": "^1.4.31",
     "@types/socket.io-client": "^1.4.32",
     "axios": "^0.17.1",
+    "bcryptjs": "^2.4.3",
     "ip": "^1.1.5",
+    "jsonwebtoken": "^8.1.1",
     "mongodb": "^3.0.1",
+    "mongoose": "^5.0.6",
     "performance-now": "^2.1.0",
     "restify": "^6.3.4",
     "semver": "^5.5.0",
     "socket.io": "^2.0.4",
     "socket.io-client": "^2.0.4",
-    "uuid": "^3.2.1"
+    "uuid": "^3.2.1",
+    "validator": "^9.4.0"
   },
   "devDependencies": {
     "eslint": "^4.15.0"

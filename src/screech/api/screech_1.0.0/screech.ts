@@ -47,13 +47,14 @@ let _relayServers = new Map<string, IRelayServer>();
  ****************************************************************************/
 
 export function initializeAPI(name: string, ver: string, apiToken:string,
-                              config: Configuration, opts: any) : void
+                              config: Configuration, opts: any) : PancakeError
 {
   // We want to hear about registration events
   if (opts.events) {
     _pitboss = opts.events as PitbossClient;
     _pitboss.on('serverUUID', (uuid) => { _onNewServerUUID(uuid); });
   }
+  return;
 }
 
 
