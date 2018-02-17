@@ -140,9 +140,9 @@ export class ScreechClient extends ClientAPI
    **                                                                        **
    ****************************************************************************/
 
-   constructor()
+   constructor(opts?: any)
    {
-     super('Screech', 'screech', '1.0.0');
+     super('Screech', 'screech', '1.0.0', opts);
    }
 
 
@@ -152,10 +152,14 @@ export class ScreechClient extends ClientAPI
    **                                                                        **
    ****************************************************************************/
 
-  async connect(address: string, port: number, onConnect: ListenerCallback = undefined, onDisconnect: DisconnectCallback = undefined, relayConnection: boolean = false) : Promise<PancakeError>
+  async connect(address: string, port: number,
+                onConnect: ListenerCallback = undefined,
+                onDisconnect: DisconnectCallback = undefined,
+                relayConnection: boolean = false,
+                opts?: any) : Promise<PancakeError>
   {
     this._relayConnection = relayConnection;
-    return this._baseConnect(address, port, onConnect, onDisconnect);
+    return this._baseConnect(address, port, onConnect, onDisconnect, opts);
   }
 
 

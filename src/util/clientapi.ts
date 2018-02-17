@@ -45,6 +45,7 @@ export class ClientAPI extends EventEmitter
   private _connected = false;
   private _reconnecting = false;
   private _reconnectInterval = RECONNECT_INTERVAL;
+  private _tryReconnect = true;
   private _timerID: NodeJS.Timer;
   private _lastError: any;
   protected _baseURL: string;
@@ -67,10 +68,17 @@ export class ClientAPI extends EventEmitter
   {
     // Let everyone know
     this.emit('disconnect', socket);
-    log.info(`${this._serviceNameUCase}: Lost connection to ${this._serviceName} server. Will attempt to reconnect in ${this._reconnectInterval} sec.`);
+    if (true === this._tryReconnect) {
+      log.info(`${this._serviceNameUCase}: Lost connection to ${this._serviceName} server. Will attempt to reconnect in ${this._reconnectInterval} sec.`);
+    }
+    else {
+      log.info(`${this._serviceNameUCase}: Lost connection to ${this._serviceName} server.`);
+    }
 
     // Try again
-    this._initiateReconnects();
+    if (true === this._tryReconnect) {
+      this._initiateReconnects();
+    }
   }
 
 
@@ -223,10 +231,18 @@ export class ClientAPI extends EventEmitter
   }
 
 
-  protected async _baseConnect(address: string, port: number, onConnect: ListenerCallback = undefined, onDisconnect: DisconnectCallback = undefined) : Promise<PancakeError>
+  protected async _baseConnect(address: string, port: number,
+                               onConnect: ListenerCallback = undefined,
+                               onDisconnect: DisconnectCallback = undefined,
+                               opts?: any) : Promise<PancakeError>
   {
     // Clean-up
     this._baseClose();
+
+    // Auto-reconnect?
+    if (opts && undefined != opts.tryReconnect) {
+      this._tryReconnect = opts.tryReconnect;
+    }
 
     // Remember these callbacks
     if (onConnect) this.on('connect', onConnect);
@@ -283,15 +299,20 @@ export class ClientAPI extends EventEmitter
    **                                                                        **
    ****************************************************************************/
 
-  constructor(serviceName: string, serverAPI: string, serverAPIVer: string)
+  constructor(serviceName: string, serverAPI: string, serverAPIVer: string, opts?:any)
   {
     super();
 
-    // Assignemnts
+    // Assignments
     this._serviceName = serviceName;
     this._serviceNameUCase = serviceName.toUpperCase();
     this._serverAPI = serverAPI;
     this._serverAPIVer = serverAPIVer;
+
+    // Auto-reconnect?
+    if (opts && undefined != opts.tryReconnect) {
+      this._tryReconnect = opts.tryReconnect;
+    }
   }
 
 
