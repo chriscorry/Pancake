@@ -136,7 +136,7 @@ export class ClientAPI extends EventEmitter
       function _innerConnect(client: ClientAPI, logErrorsInner: boolean) : PancakeError
       {
         // Make our websocket connect
-        socketClient = socketIOClient(client._baseURL + '/');
+        socketClient = socketIOClient(client._baseURL + '/', { reconnection: false });
         if (!socketClient) {
           client._initiateReconnects(_innerConnect, true);
           return client._processError('ERR_CLIENT_CONNECT', `${client._serviceNameUCase}: Could not connect to ${client._serviceName} server ${client._baseURL}`, undefined, logErrorsInner);
