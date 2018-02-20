@@ -115,13 +115,13 @@ AccountSchema.statics.findByCredentials = async function(email: string, password
 }
 
 
-AccountSchema.statics.findByToken = async function(JWT: string) : Promise<any>
+AccountSchema.statics.findByToken = async function(token: tokens.Token) : Promise<any>
 {
   let Account = this;
 
   try {
-    let token = new tokens.Token(JWT);
-    return Account.findByID(token.get('accnt'));
+    if (token.valid)
+      return Account.findByID(token.get('accnt'));
   }
   catch (err) {}
 
@@ -129,7 +129,7 @@ AccountSchema.statics.findByToken = async function(JWT: string) : Promise<any>
 }
 
 
-AccountSchema.methods.generateAuthToken = function ()
+AccountSchema.methods.generateAuthToken = function() : tokens.Token
 {
   let Account = this;
   let token = new tokens.Token();
@@ -139,9 +139,10 @@ AccountSchema.methods.generateAuthToken = function ()
   token.subject = 'ent';
   token.set('accnt', Account._id.toHexString());
   token.set('ent', Account.entitlements);
+  token.freeze();
 
   // Create the token
-  return token.jwt;
+  return token;
 }
 
 

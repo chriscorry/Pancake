@@ -8,6 +8,7 @@
 import _              = require('lodash');
 import semver         = require('semver');
 import { EventEmitter }    from 'events';
+import { Token }           from '../util/tokens';
 import { PancakeError }    from '../util/pancake-err';
 import { IAPI,
          IEndpointInfo,
@@ -31,7 +32,8 @@ interface VersionInfo
 }
 
  //Events
- const EVT_NEGOTIATE = 'negotiate';
+ const EVT_NEGOTIATE    = 'negotiate';
+ const EVT_UPDATE_TOKEN = 'updateToken';
 
 
 /****************************************************************************
@@ -193,12 +195,25 @@ export class TransportSocketIO extends EventEmitter implements ITransport
       this._onDisconnect(reason, socket);
     });
     socket.on(EVT_NEGOTIATE, (payload:any, ack:Function) : any => {
-      payload.socket = socket;
-      let resp = this._onNegotiate(payload);
-      if (resp) {
-        ack(resp)
+      if (payload.apiRequests) {
+        let actualPayload = {
+          socket,
+          apiRequests: !Array.isArray(payload.apiRequests) ? [payload.apiRequests] : payload.apiRequests,
+          token: payload.token
+        };
+        let resp = this._onNegotiate(actualPayload);
+        if (resp) {
+          ack(resp)
+        }
+        return resp;
       }
-      return resp;
+      ack([ { status: 'ERR_BAD_NEGOTIATE', reason: 'Incorrectly formatted negotiate request.' }]);
+      return;
+    });
+    socket.on(EVT_UPDATE_TOKEN, (payload:any, ack:Function) : any => {
+      let token = new Token(payload.token);
+      socket.token = token.valid ? token : undefined;
+      return { status: 'OK' };
     });
 
     // Let anyone else know who cares
@@ -221,14 +236,11 @@ export class TransportSocketIO extends EventEmitter implements ITransport
   private _onNegotiate(payload: any) : any
   {
     let socket = payload.socket;
+    let apiRequests = payload.apiRequests;
+    let token = new Token(payload.token);
+    socket.token = token.valid ? token : undefined;
 
     if (this._pendingWSClients.has(socket) || this._currentWSClients.has(socket)) {
-
-      // Single object?
-      let apiRequests = payload;
-      if (!Array.isArray(apiRequests)) {
-          apiRequests = [ apiRequests ];
-      }
 
       // Process each one in return
       let returnValues: any[] = [];
@@ -269,11 +281,11 @@ export class TransportSocketIO extends EventEmitter implements ITransport
                 socket.removeAllListeners(eventName);
 
                 // Register with wrapper function
-                socket.on(eventName, async (payload:any, ack:Function) : Promise<any> => {
+                socket.on(eventName, async (payloadIn:any, ack:Function) : Promise<any> => {
                   try {
-                    if (!payload) payload = {};
-                    payload.socket = socket;
-                    let resp = await endpointInfo.handler(payload, undefined);
+                    if (!payloadIn) payloadIn = {};
+                    payloadIn.socket = socket;
+                    let resp = await endpointInfo.handler(payloadIn, socket.token);
                     if (ack) {
                       if (resp.err) {
                         ack(resp.err);

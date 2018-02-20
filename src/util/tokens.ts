@@ -64,6 +64,12 @@ export class Token
    **                                                                        **
    ****************************************************************************/
 
+  get valid() : boolean
+  {
+    return this._baked;
+  }
+
+
   get issuer() : string
   {
     return this._issuer;
@@ -170,6 +176,12 @@ export class Token
   }
 
 
+  isSame(JWT: string) : boolean
+  {
+    return (this._baked && JWT === this._jwt) ? true : false;
+  }
+
+
   freeze() : string
   {
     // Quick optimization
@@ -251,9 +263,11 @@ export class Token
       this._uuid = decodedJWT.tok;
 
       // Bring over payload fields
-      Object.assign(this._userPayload, _.omit(decodedJWT, [
-        'iss', 'sub', 'iat', 'exp', 'tok'
-      ]));
+      if (!this.expired) {
+        Object.assign(this._userPayload, _.omit(decodedJWT, [
+          'iss', 'sub', 'iat', 'exp', 'tok'
+        ]));
+      }
 
       // We're baked
       this._baked = true;
@@ -274,7 +288,8 @@ export class Token
       throw new PancakeError('ERR_BAD_TOKEN', 'TOKEN: Could not verify token.');
     }
   }
-}
+
+} // END class Token
 
 
 /****************************************************************************
@@ -287,45 +302,3 @@ export function setConfig(config: Configuration)
 {
   _config = config;
 }
-
-
-// export function hasExpired(token: string) : boolean
-// {
-//   let decodedToken = decodeToken(token);
-//   if (decodedToken) {
-//     return decodedToken.exp <= Date.now();
-//   }
-//   return true;
-// }
-//
-//
-// export function decodeToken(token: string) : any
-// {
-//   // Simple validation
-//   if (!_config) return;
-//
-//   return jwt.verify(token, _config.get(KEY_SECRET));
-// }
-//
-//
-// export function generateAuthToken(issuer: string, subject: string, userPayload: any) : string
-// {
-//   let tokenLifespan = _config.get(KEY_TOKEN_LIFESPAN);
-//   let now = Date.now();
-//
-//   let payload: any = {
-//     iss: issuer,
-//     sub: subject,
-//     iat: now,
-//     exp: now + (tokenLifespan || DEFAULT_TOKEN_LIFESPAN),
-//     tok: uuidv4(),
-//   };
-//
-//   // Add the user payload, taking care to not overwrite existing peoperties
-//   Object.assign(payload, _.omit(userPayload, [
-//     'iss', 'sub', 'iat', 'exp', 'tok'
-//   ]));
-//
-//   // Create the token
-//   return jwt.sign(payload, _config.get(KEY_SECRET)).toString();
-// }

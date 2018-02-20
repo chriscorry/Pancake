@@ -1,5 +1,6 @@
 import { Configuration } from '../util/pancake-config';
 import { PancakeError }  from '../util/pancake-err';
+import { Token }         from '../util/tokens';
 
 
 export interface IEndpointInfo {
@@ -18,7 +19,7 @@ export interface IEndpointResponse {
   header?: any
 }
 
-export type EndpointHandler = (payload: any, headers?: any) => IEndpointResponse;
+export type EndpointHandler = (payload: any, token?: Token, headers?: any) => IEndpointResponse;
 
 export interface IAPI
 {

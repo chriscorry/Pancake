@@ -8,11 +8,11 @@ import ip              = require('ip');
 
 import { ListenerCallback,
          DisconnectCallback,
-         ClientAPI }     from '../../../util/clientapi';
-import { log }           from '../../../util/pancake-utils';
-import { PancakeError }  from '../../../util/pancake-err';
-import { Configuration } from '../../../util/pancake-config';
-import { flagpole }      from '../../../flagpole/flagpole';
+         ClientWebsocketAPI } from '../../../util/clientapi';
+import { log }                from '../../../util/pancake-utils';
+import { PancakeError }       from '../../../util/pancake-err';
+import { Configuration }      from '../../../util/pancake-config';
+import { flagpole }           from '../../../flagpole/flagpole';
 
 
 /****************************************************************************
@@ -37,7 +37,7 @@ import { flagpole }      from '../../../flagpole/flagpole';
  **                                                                        **
  ****************************************************************************/
 
-export class PitbossClient extends ClientAPI
+export class PitbossClient extends ClientWebsocketAPI
 {
   private _server: any;
   private _uuidSave: string;

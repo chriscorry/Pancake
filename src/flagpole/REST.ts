@@ -5,6 +5,7 @@
  ****************************************************************************/
 
 import _              = require('lodash');
+import { Token }           from '../util/tokens';
 import { PancakeError }    from '../util/pancake-err';
 import { IEndpointInfo,
          IEndpointResponse,
@@ -90,8 +91,9 @@ export class TransportREST implements ITransport
           async (req: any, res: any, next: Function) : Promise<any> => {
             let apiRes: IEndpointResponse;
             try {
+                let token = new Token(req.headers['x-auth']);
                 let payload = this._buildPayload(req);
-                apiRes = await endpointInfo.handler(payload, req.headers);
+                apiRes = await endpointInfo.handler(payload, token.valid ? token : undefined, req.headers);
                 if (apiRes.header && apiRes.header.name && apiRes.header.data) {
                   res.header(apiRes.header.name, apiRes.header.data);
                 }

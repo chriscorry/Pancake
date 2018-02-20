@@ -36,11 +36,11 @@ export type DisconnectCallback = (socket:any) => void;
 
 /****************************************************************************
  **                                                                        **
- ** Class ClientAPI                                                        **
+ ** Class ClientWebsocketAPI                                               **
  **                                                                        **
  ****************************************************************************/
 
-export class ClientAPI extends EventEmitter
+export class ClientWebsocketAPI extends EventEmitter
 {
   private _connected = false;
   private _reconnecting = false;
@@ -141,7 +141,7 @@ export class ClientAPI extends EventEmitter
 
     return new Promise<PancakeError>((resolve, reject) => {
 
-      function _innerConnect(client: ClientAPI, logErrorsInner: boolean) : PancakeError
+      function _innerConnect(client: ClientWebsocketAPI, logErrorsInner: boolean) : PancakeError
       {
         // Make our websocket connect
         socketClient = socketIOClient(client._baseURL + '/', { reconnection: false });
@@ -154,7 +154,7 @@ export class ClientAPI extends EventEmitter
         try {
 
           // Get access to the API
-          socketClient.emit('negotiate', { name: client._serverAPI, ver: client._serverAPIVer }, client._timeoutCallback((negotiateResp: any) => {
+          socketClient.emit('negotiate', { token: undefined, apiRequests: { name: client._serverAPI, ver: client._serverAPIVer } }, client._timeoutCallback((negotiateResp: any) => {
 
             // Timeout?
             if (!(negotiateResp instanceof PancakeError)) {
@@ -351,4 +351,4 @@ export class ClientAPI extends EventEmitter
     return this._connected;
   }
 
-} // END class ClientAPI
+} // END class ClientWebsocketAPI

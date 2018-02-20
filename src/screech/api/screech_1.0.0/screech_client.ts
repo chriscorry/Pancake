@@ -6,10 +6,10 @@
 
 import { ListenerCallback,
          DisconnectCallback,
-         ClientAPI }     from '../../../util/clientapi';
-import * as utils        from '../../../util/pancake-utils';
-import { PancakeError }  from '../../../util/pancake-err';
-import { Configuration } from '../../../util/pancake-config';
+         ClientWebsocketAPI } from '../../../util/clientapi';
+import * as utils             from '../../../util/pancake-utils';
+import { PancakeError }       from '../../../util/pancake-err';
+import { Configuration }      from '../../../util/pancake-config';
 const log = utils.log;
 
 
@@ -26,7 +26,7 @@ const log = utils.log;
  **                                                                        **
  ****************************************************************************/
 
-export class ScreechClient extends ClientAPI
+export class ScreechClient extends ClientWebsocketAPI
 {
   private _activeDomains = new Set<[string, string, any]>();
   private _activeChannels = new Set<[string, string, string, any]>();
