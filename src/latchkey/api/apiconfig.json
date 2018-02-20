@@ -7,7 +7,7 @@
       "versions": [
         { "ver": "1.0.0", "fileName": "latchkey_1.0.0/latchkey.js" }
       ],
-      "metaTags": { "audience": ["client", "server", "tools"] }
+      "metaTags": { "audience": ["client", "server", "tools"], "authenticator": true }
     }
   ]
 }

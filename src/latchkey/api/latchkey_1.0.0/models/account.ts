@@ -4,15 +4,16 @@
  **                                                                        **
  ****************************************************************************/
 
+const uuidv4    = require('uuid/v4');
 const mongoose  = require('mongoose');
 const validator = require('validator');
-const jwt       = require('jsonwebtoken');
 const bcrypt    = require('bcryptjs');
 const _         = require('lodash');
 
+import * as tokens       from '../../../../util/tokens';
 import { log }           from '../../../../util/pancake-utils';
+import { PancakeError }  from '../../../../util/pancake-err';
 import { Configuration } from '../../../../util/pancake-config';
-
 
 
 /****************************************************************************
@@ -20,8 +21,6 @@ import { Configuration } from '../../../../util/pancake-config';
  ** Vars & definitions                                                     **
  **                                                                        **
  ****************************************************************************/
-
-let _config: Configuration;
 
 
 /****************************************************************************
@@ -46,25 +45,103 @@ let AccountSchema = new mongoose.Schema({
     type: String,
     required: true,
     minlength: 8
-  }
+  },
+  entitlements : [
+    {
+      domain: {
+        type: String,
+        required: true
+      },
+      role: {
+        type: String,
+        required: true
+      },
+      value: {
+        type: Boolean,
+        required: true
+      }
+    }
+  ]
 });
 
 
 AccountSchema.statics.setConfig = function(config: Configuration)
 {
-  _config = config;
+  tokens.setConfig(config);
+}
+
+
+AccountSchema.statics.findByID = async function(id: string) : Promise<any>
+{
+  let Account = this;
+
+  // Find the user
+  return Account.findOne({_id: id}).then((account: any) => {
+
+    // Have an account?
+    if (!account) {
+      return Promise.reject(new PancakeError('ERR_NO_ACCOUNT', `LATCHKEY: Could not retrieve account with that ID`));
+    }
+
+    return account;
+  });
+}
+
+
+AccountSchema.statics.findByCredentials = async function(email: string, password: string) : Promise<any>
+{
+  let Account = this;
+
+  // Find the user
+  return Account.findOne({email}).then((account: any) => {
+
+    // Have an account?
+    if (!account) {
+      return Promise.reject(new PancakeError('ERR_NO_ACCOUNT', `LATCHKEY: Could not retrieve account with email '${email}'`));
+    }
+
+    // Make sure the passwords match
+    return new Promise((resolve, reject) => {
+        bcrypt.compare(password, account.password, (err: any, res: any) => {
+          if (!res) {
+            reject(err);
+          }
+          else {
+            resolve(account);
+          }
+        });
+    });
+  });
+}
+
+
+AccountSchema.statics.findByToken = async function(JWT: string) : Promise<any>
+{
+  let Account = this;
+
+  try {
+    let token = new tokens.Token(JWT);
+    return Account.findByID(token.get('accnt'));
+  }
+  catch (err) {}
+
+  return ;
 }
 
 
 AccountSchema.methods.generateAuthToken = function ()
 {
   let Account = this;
-  let access = 'auth';
-  let token = jwt.sign({ _id: Account._id.toHexString(), access }, _config.get('JWT_SECRET')).toString();
-  Account.save().then(() => {
-    return token;
-  });
-  return token;
+  let token = new tokens.Token();
+
+  // Set it up
+  token.issuer = 'lkey-1.0.0';
+  token.subject = 'ent';
+  token.set('accnt', Account._id.toHexString());
+  token.set('ent', Account.entitlements);
+
+  // Create the token
+  return token.jwt;
 }
 
 
@@ -72,7 +149,7 @@ AccountSchema.methods.toJSON = function ()
 {
   let Account = this;
   let AccountObject = Account.toObject();
-  return _.pick(AccountObject, ['_id', 'email']);
+  return _.pick(AccountObject, ['_id', 'email', 'entitlements']);
 }
 
 

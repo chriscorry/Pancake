@@ -91,7 +91,10 @@ export class TransportREST implements ITransport
             let apiRes: IEndpointResponse;
             try {
                 let payload = this._buildPayload(req);
-                apiRes = await endpointInfo.handler(payload);
+                apiRes = await endpointInfo.handler(payload, req.headers);
+                if (apiRes.header && apiRes.header.name && apiRes.header.data) {
+                  res.header(apiRes.header.name, apiRes.header.data);
+                }
                 if (!apiRes.err) {
                   res.send(apiRes.status, apiRes.result);
                 }

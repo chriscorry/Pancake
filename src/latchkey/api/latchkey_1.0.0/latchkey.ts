@@ -86,6 +86,49 @@ async function _createAccount(payload: any) : Promise<IEndpointResponse>
 }
 
 
+async function _createToken(payload: any) : Promise<IEndpointResponse>
+{
+  let email = payload.email;
+  let password = payload.password;
+  let account: any;
+  let token: string;
+
+  // Find the account and generate the token
+  await Account.findByCredentials(email, password).then((account: any) => {
+    token = account.generateAuthToken();
+  }).catch((err: any) => {});
+  if (!token) {
+    return { status: 400, result: new PancakeError('ERR_AUTHENTICATE', 'LATCHKEY: Could not generate token.') };
+  }
+  return { status: 200, result: { token }, header: { name: 'x-auth', data: token } };
+}
+
+
+async function _refreshToken(payload: any, headers: any) : Promise<IEndpointResponse>
+{
+  let oldToken = payload.token;
+  let account: any;
+  let token: string;
+
+  // Pull token from header?
+  if (!oldToken && headers && headers['x-auth']) {
+    oldToken = headers['x-auth'];
+  }
+  if (!oldToken) {
+    return { status: 400, result: new PancakeError('ERR_NO_TOKEN', 'LATCHKEY: No token specified in request to refresh.') };
+  }
+
+  // Find the account and generate the token
+  await Account.findByToken(oldToken).then((account: any) => {
+    token = account.generateAuthToken();
+  }).catch((err: any) => {});
+  if (!token) {
+    return { status: 400, result: new PancakeError('ERR_AUTHENTICATE', 'LATCHKEY: Invalid token to refresh.') };
+  }
+  return { status: 200, result: { token }, header: { name: 'x-auth', data: token } };
+}
+
+
 /****************************************************************************
  **                                                                        **
  ** Flagpole housekeeping                                                  **
@@ -93,5 +136,7 @@ async function _createAccount(payload: any) : Promise<IEndpointResponse>
  ****************************************************************************/
 
 export let flagpoleHandlers: IEndpointInfo[] = [
-  { requestType: 'post',  path: '/latchkey/account', event: 'createAccount',   handler: _createAccount }
+  { requestType: 'post',  path: '/latchkey/account', event: 'createAccount', handler: _createAccount },
+  { requestType: 'post',  path: '/latchkey/token',   event: 'createToken',   handler: _createToken   },
+  { requestType: 'post',  path: '/latchkey/refresh', event: 'refreshToken',  handler: _refreshToken  }
 ];

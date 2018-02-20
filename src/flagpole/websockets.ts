@@ -273,7 +273,7 @@ export class TransportSocketIO extends EventEmitter implements ITransport
                   try {
                     if (!payload) payload = {};
                     payload.socket = socket;
-                    let resp = await endpointInfo.handler(payload);
+                    let resp = await endpointInfo.handler(payload, undefined);
                     if (ack) {
                       if (resp.err) {
                         ack(resp.err);

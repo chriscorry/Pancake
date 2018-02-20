@@ -1,6 +1,7 @@
 {
   "global": {
     "JWT_SECRET": "sjkhdsafk327678324687bjkbbb&^*&^bbdsdkbkdkb",
+    "DEFAULT_TOKEN_LIFESPAN": 900000,
     "MAINTENANCE_INTERVAL": 300,
     "MAX_CACHE_SIZE": 100000,
     "MONGODB_DATABASE": "UserRegistry"

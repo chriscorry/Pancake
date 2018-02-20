@@ -14,10 +14,11 @@ export interface IEndpointInfo {
 export interface IEndpointResponse {
   status?: number,
   result?: any,
-  err?: any
+  err?: any,
+  header?: any
 }
 
-export type EndpointHandler = (payload: any) => IEndpointResponse;
+export type EndpointHandler = (payload: any, headers?: any) => IEndpointResponse;
 
 export interface IAPI
 {
