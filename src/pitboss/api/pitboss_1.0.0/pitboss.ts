@@ -14,7 +14,8 @@ import { IDomain,
          IChannel,
          IMessage,
          messaging }         from '../../../screech/messaging';
-import { IEndpointInfo,
+import { entitledEndpoint,
+         IEndpointInfo,
          IEndpointResponse } from '../../../flagpole/apitypes';
 import { IServerInfo,
          IServiceInfo,
@@ -32,6 +33,13 @@ import { RandomStrategy }     from './strat_random';
  ** Vars & definitions                                                     **
  **                                                                        **
  ****************************************************************************/
+
+const ENT_DOMAIN       = 'pitboss';
+const ENT_ROLE_ADMIN   = 'admin';
+const ENT_ROLE_CLIENT  = 'client';
+const ENT_ROLE_SERVER  = 'server';
+const ENT_ROLE_TOOLS   = 'tools';
+const API_TAG          = 'PITBOSS';
 
 type UUID = string;
 const NOTARIZE_TIMEOUT    = 10*60; // 10 minutes
@@ -883,16 +891,74 @@ function getLastError() : PancakeError
  ****************************************************************************/
 
 export let flagpoleHandlers: IEndpointInfo[] = [
-  { requestType: 'post',  path: '/pitboss/register',        event: 'register',         handler: _registerServer,    metaTags: { audience: 'server' } },
-  { requestType: 'post',  path: '/pitboss/lookup',          event: 'lookup',           handler: _lookup                },
-  { requestType: 'get',   path: '/pitboss/server',          event: 'server',           handler: _getServerInfo         },
-  { requestType: 'get',   path: '/pitboss/servers',         event: 'servers',          handler: _getServerRegistry     },
-  { requestType: 'get',   path: '/pitboss/services',        event: 'services',         handler: _getServiceRegistry    },
-  { requestType: 'post',  path: '/pitboss/creategroup',     event: 'createGroup',      handler: _createGroup           },
-  { requestType: 'del',   path: '/pitboss/deletegroup',     event: 'deleteGroup',      handler: _deleteGroup           },
-  { requestType: 'post',  path: '/pitboss/servertogroup',   event: 'serverToGroup',    handler: _addServerToGroup      },
-  { requestType: 'del',   path: '/pitboss/serverfromgroup', event: 'serverFromGroup',  handler: _removeServerFromGroup },
-  { requestType: 'get',   path: '/pitboss/groups',          event: 'groups',           handler: _getGroups             },
-  {                                                         event: 'notarize',         handler: _onNotarize,        metaTags: { audience: 'server' } },
-  {                                                         event: 'registerInterest', handler: _registerInterest,  metaTags: { audience: 'tools' } }
+  {
+    requestType: 'post',
+    path: '/pitboss/register',
+    event: 'register',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_SERVER, ENT_ROLE_ADMIN ], API_TAG, _registerServer),
+    metaTags: { audience: 'server' }
+  },
+  {
+    requestType: 'post',
+    path: '/pitboss/lookup',
+    event: 'lookup',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_CLIENT, ENT_ROLE_SERVER, ENT_ROLE_TOOLS, ENT_ROLE_ADMIN ], API_TAG, _lookup)
+  },
+  {
+    requestType: 'get',
+    path: '/pitboss/server',
+    event: 'server',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_CLIENT, ENT_ROLE_SERVER, ENT_ROLE_TOOLS, ENT_ROLE_ADMIN ], API_TAG, _getServerInfo)
+  },
+  {
+    requestType: 'get',
+    path: '/pitboss/servers',
+    event: 'servers',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_CLIENT, ENT_ROLE_SERVER, ENT_ROLE_TOOLS, ENT_ROLE_ADMIN ], API_TAG, _getServerRegistry)
+  },
+  {
+    requestType: 'get',
+    path: '/pitboss/services',
+    event: 'services',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_CLIENT, ENT_ROLE_SERVER, ENT_ROLE_TOOLS, ENT_ROLE_ADMIN ], API_TAG, _getServiceRegistry)
+  },
+  {
+    requestType: 'post',
+    path: '/pitboss/creategroup',
+    event: 'createGroup',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_SERVER, ENT_ROLE_TOOLS, ENT_ROLE_ADMIN ], API_TAG, _createGroup)
+  },
+  {
+    requestType: 'del',
+    path: '/pitboss/deletegroup',
+    event: 'deleteGroup',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_SERVER, ENT_ROLE_TOOLS, ENT_ROLE_ADMIN ], API_TAG, _deleteGroup)
+  },
+  {
+    requestType: 'post',
+    path: '/pitboss/servertogroup',
+    event: 'serverToGroup',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_SERVER, ENT_ROLE_TOOLS, ENT_ROLE_ADMIN ], API_TAG, _addServerToGroup)
+  },
+  {
+    requestType: 'del',
+    path: '/pitboss/serverfromgroup',
+    event: 'serverFromGroup',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_SERVER, ENT_ROLE_TOOLS, ENT_ROLE_ADMIN ], API_TAG, _removeServerFromGroup)
+  },
+  {
+    requestType: 'get',
+    path: '/pitboss/groups',
+    event: 'groups',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_CLIENT, ENT_ROLE_SERVER, ENT_ROLE_TOOLS, ENT_ROLE_ADMIN ], API_TAG, _getGroups)
+  },
+  { event: 'notarize',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_CLIENT, ENT_ROLE_SERVER, ENT_ROLE_TOOLS, ENT_ROLE_ADMIN ], API_TAG, _onNotarize),
+    metaTags: { audience: 'server' }
+  },
+  {
+    event: 'registerInterest',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_CLIENT, ENT_ROLE_SERVER, ENT_ROLE_TOOLS, ENT_ROLE_ADMIN ], API_TAG, _registerInterest),
+    metaTags: { audience: 'tools' }
+  }
 ];

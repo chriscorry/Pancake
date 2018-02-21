@@ -8,12 +8,14 @@ let mongoose               = require('mongoose');
 let _                      = require('lodash');
 
 import { Token }             from '../../../util/tokens';
-import { Entitlements }      from '../../../util/entitlements';
+import { entitled,
+         Entitlements }      from '../../../util/entitlements';
 import { PancakeError }      from '../../../util/pancake-err';
 import { grab }              from '../../../util/pancake-grab';
 import { log }               from '../../../util/pancake-utils';
 import { Configuration }     from '../../../util/pancake-config';
-import { IEndpointInfo,
+import { entitledEndpoint,
+         IEndpointInfo,
          IEndpointResponse } from '../../../flagpole/apitypes';
 import { Account }           from '../models_1.0.0/account';
 
@@ -23,6 +25,11 @@ import { Account }           from '../models_1.0.0/account';
  ** Vars & definitions                                                     **
  **                                                                        **
  ****************************************************************************/
+
+const ENT_DOMAIN       = 'accntmgmt';
+const ENT_ROLE_ADMIN   = 'admin';
+const ENT_ROLE_CREATOR = 'creator';
+const API_TAG          = 'ACCNTMGMT';
 
 let _db = mongoose.connection;
 
@@ -92,5 +99,10 @@ async function _createAccount(payload: any, token: Token) : Promise<IEndpointRes
  ****************************************************************************/
 
 export let flagpoleHandlers: IEndpointInfo[] = [
-  { requestType: 'post',  path: '/accntmgmt/account', event: 'createAccount', handler: _createAccount }
+  {
+    requestType: 'post',
+    path: '/accntmgmt/account',
+    event: 'createAccount',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_CREATOR, ENT_ROLE_ADMIN ], API_TAG, _createAccount)
+  }
 ];

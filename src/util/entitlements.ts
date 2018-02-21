@@ -23,6 +23,30 @@ export interface IEntitlement
 
 /****************************************************************************
  **                                                                        **
+ ** Entitlements API                                                       **
+ **                                                                        **
+ ****************************************************************************/
+
+export function entitled(token: Token, domain: string, role: string)
+{
+  let ent = new Entitlements(token, domain);
+  return ent.isSuperAdmin || ent.satisfies(role);
+}
+
+
+export function entitledMultiple(token: Token, domain: string, roles: string[])
+{
+  let ent = new Entitlements(token, domain);
+  for (let role of roles) {
+    if (ent.satisfies(role))
+      return true;
+  }
+  return ent.isSuperAdmin;
+}
+
+
+/****************************************************************************
+ **                                                                        **
  ** Entitlements class                                                     **
  **                                                                        **
  ****************************************************************************/
@@ -31,6 +55,7 @@ export class Entitlements
 {
   private _entitlements: IEntitlement[] = [];
   private _expired: boolean = false;
+  private _isSuperAdmin = false;
   private _defaultDomain: string;
 
 
@@ -42,15 +67,18 @@ export class Entitlements
 
   constructor(entitlementsOrToken?: any, defaultDomain?: string)
   {
+    // Set in the entitlements array
     if (entitlementsOrToken) {
       if (Array.isArray(entitlementsOrToken)) {
         this._entitlements = entitlementsOrToken as IEntitlement[];
       }
       else if (entitlementsOrToken instanceof Token) {
         let token = entitlementsOrToken as Token;
-        this._expired = token.expired;
-        if (!token.expired) {
-          this._entitlements = token.get('ent');
+        if (token.valid) {
+          this._expired = token.expired;
+          if (!token.expired) {
+            this._entitlements = token.get('ent');
+          }
         }
       }
     }
@@ -61,9 +89,21 @@ export class Entitlements
 
   /****************************************************************************
    **                                                                        **
+   ** Private methods                                                        **
+   **                                                                        **
+   ****************************************************************************/
+
+  /****************************************************************************
+   **                                                                        **
    ** Public methods                                                         **
    **                                                                        **
    ****************************************************************************/
+
+  get isSuperAdmin() : boolean
+  {
+    return this.satisfies('superadmin', 'pancake');
+  }
+
 
   get expired() : boolean
   {

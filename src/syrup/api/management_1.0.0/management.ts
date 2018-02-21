@@ -10,7 +10,8 @@ import { PancakeError }      from '../../../util/pancake-err';
 import { grab }              from '../../../util/pancake-grab';
 import { flagpole }          from '../../../flagpole/flagpole';
 const log = util.log;
-import { IEndpointInfo,
+import { entitledEndpoint,
+         IEndpointInfo,
          IEndpointResponse } from '../../../flagpole/apitypes';
 
 
@@ -19,6 +20,14 @@ import { IEndpointInfo,
  ** Vars & definitions                                                     **
  **                                                                        **
  ****************************************************************************/
+
+const ENT_DOMAIN       = 'servermgmt';
+const ENT_ROLE_ADMIN   = 'admin';
+const ENT_ROLE_CLIENT  = 'client';
+const ENT_ROLE_SERVER  = 'server';
+const ENT_ROLE_TOOLS   = 'tools';
+const ENT_ROLE_DEBUG   = 'debug';
+const API_TAG          = 'MGMT';
 
 const DEFAULT_SHUTDOWN_TIMER = 5; // 5 seconds
 
@@ -241,12 +250,53 @@ function _getStats(payload: any) : IEndpointResponse
  ****************************************************************************/
 
 export let flagpoleHandlers: IEndpointInfo[] = [
-  { requestType: 'get',   path: '/management/logbookmark',    event: 'logBookmark',    handler: _logBookmark, metaTags: { audience: 'debug' } },
-  { requestType: 'put',   path: '/management/setloglevel',    event: 'setLogLevel',    handler: _setLogLevel },
-  { requestType: 'patch', path: '/management/reloadapis',     event: 'reloadAPIs',     handler: _reloadAPIConfig },
-  { requestType: 'get',   path: '/management/apis',           event: 'apis',           handler: _getAPIs },
-  { requestType: 'del',   path: '/management/unregisterapi',  event: 'unregisterapi',  handler: _unregisterAPI },
-  { requestType: 'get',   path: '/management/stats/',         event: 'stats',          handler: _getStats },
-  { requestType: 'post',  path: '/management/shutdown',       event: 'shutdown',       handler: _shutdown },
-  { requestType: 'put',   path: '/management/cancelshutdown', event: 'cancelShutdown', handler: _cancelShutdown }
+  {
+    requestType: 'get',
+    path: '/management/logbookmark',
+    event: 'logBookmark',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_DEBUG, ENT_ROLE_TOOLS, ENT_ROLE_ADMIN ], API_TAG, _logBookmark),
+    metaTags: { audience: 'debug' }
+  },
+  {
+    requestType: 'put',
+    path: '/management/setloglevel',
+    event: 'setLogLevel',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_DEBUG, ENT_ROLE_TOOLS, ENT_ROLE_ADMIN ], API_TAG, _setLogLevel),
+  },
+  {
+    requestType: 'patch',
+    path: '/management/reloadapis',
+    event: 'reloadAPIs',
+    handler: entitledEndpoint(ENT_DOMAIN, ENT_ROLE_ADMIN, API_TAG, _reloadAPIConfig)
+  },
+  {
+    requestType: 'get',
+    path: '/management/apis',
+    event: 'apis',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_CLIENT, ENT_ROLE_SERVER, ENT_ROLE_DEBUG, ENT_ROLE_TOOLS, ENT_ROLE_ADMIN ], API_TAG, _getAPIs)
+  },
+  {
+    requestType: 'del',
+    path: '/management/unregisterapi',
+    event: 'unregisterapi',
+    handler: entitledEndpoint(ENT_DOMAIN, ENT_ROLE_ADMIN, API_TAG, _unregisterAPI)
+  },
+  {
+    requestType: 'get',
+    path: '/management/stats/',
+    event: 'stats',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_DEBUG, ENT_ROLE_TOOLS, ENT_ROLE_ADMIN ], API_TAG, _getStats)
+  },
+  {
+    requestType: 'post',
+    path: '/management/shutdown',
+    event: 'shutdown',
+    handler: entitledEndpoint(ENT_DOMAIN, ENT_ROLE_ADMIN, API_TAG, _shutdown)
+  },
+  {
+    requestType: 'put',
+    path: '/management/cancelshutdown',
+    event: 'cancelShutdown',
+    handler: entitledEndpoint(ENT_DOMAIN, ENT_ROLE_ADMIN, API_TAG, _cancelShutdown)
+  }
 ];

@@ -9,8 +9,23 @@ const  { SimpleMongoFactory } = require('./SimpleMongoFactory');
 import { PancakeError }      from '../../../util/pancake-err';
 import { grab }              from '../../../util/pancake-grab';
 import { Configuration }     from '../../../util/pancake-config';
-import { IEndpointInfo,
+import { entitledEndpoint,
+         IEndpointInfo,
          IEndpointResponse } from '../../../flagpole/apitypes';
+
+/****************************************************************************
+ **                                                                        **
+ ** Vars & definitions                                                     **
+ **                                                                        **
+ ****************************************************************************/
+
+const ENT_DOMAIN       = 'valet';
+const ENT_ROLE_ADMIN   = 'admin';
+const ENT_ROLE_CLIENT  = 'client';
+const ENT_ROLE_SERVER  = 'server';
+const ENT_ROLE_TOOLS   = 'tools';
+const ENT_ROLE_DEBUG   = 'debug';
+const API_TAG          = 'VALET';
 
 
 /****************************************************************************
@@ -172,11 +187,49 @@ async function load10(payload: any) : Promise<IEndpointResponse>
  ****************************************************************************/
 
 export let flagpoleHandlers: IEndpointInfo[] = [
-  { requestType: 'post',  path: '/cache/item',    event: 'item',   handler: getItem },
-  { requestType: 'post',  path: '/cache/items',   event: 'items',  handler: getItemMultiple },
-  { requestType: 'post',  path: '/cache/set',     event: 'set',    handler: setItem },
-  { requestType: 'post',  path: '/cache/load',    event: 'load',   handler: loadItems },
-  { requestType: 'get',   path: '/cache/stats',   event: 'stats',  handler: getStats, metaTags: { audience: 'tools' } },
-  { requestType: 'get',   path: '/cache/dump',    event: 'dump',   handler: dumpCache, metaTags: { audience: 'tools' } },
-  { requestType: 'get',   path: '/cache/load10',  event: 'load10', handler: load10, metaTags: { audience: 'debug' } }
+  {
+    requestType: 'post',
+    path: '/cache/item',
+    event: 'item',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_CLIENT, ENT_ROLE_SERVER, ENT_ROLE_TOOLS, ENT_ROLE_ADMIN ], API_TAG, getItem)
+  },
+  {
+    requestType: 'post',
+    path: '/cache/items',
+    event: 'items',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_CLIENT, ENT_ROLE_SERVER, ENT_ROLE_TOOLS, ENT_ROLE_ADMIN ], API_TAG, getItemMultiple)
+  },
+  {
+    requestType: 'post',
+    path: '/cache/set',
+    event: 'set',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_CLIENT, ENT_ROLE_SERVER, ENT_ROLE_TOOLS, ENT_ROLE_ADMIN ], API_TAG, setItem)
+  },
+  {
+    requestType: 'post',
+    path: '/cache/load',
+    event: 'load',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_CLIENT, ENT_ROLE_SERVER, ENT_ROLE_DEBUG, ENT_ROLE_TOOLS, ENT_ROLE_ADMIN ], API_TAG, loadItems)
+  },
+  {
+    requestType: 'get',
+    path: '/cache/stats',
+    event: 'stats',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_DEBUG, ENT_ROLE_TOOLS, ENT_ROLE_ADMIN ], API_TAG, getStats),
+    metaTags: { audience: 'tools' }
+  },
+  {
+    requestType: 'get',
+    path: '/cache/dump',
+    event: 'dump',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_DEBUG, ENT_ROLE_TOOLS, ENT_ROLE_ADMIN ], API_TAG, dumpCache),
+    metaTags: { audience: 'tools' }
+  },
+  {
+    requestType: 'get',
+    path: '/cache/load10',
+    event: 'load10',
+    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_DEBUG, ENT_ROLE_TOOLS, ENT_ROLE_ADMIN ], API_TAG, load10),
+    metaTags: { audience: 'debug' }
+  }
 ];
