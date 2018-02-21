@@ -23,8 +23,6 @@ const KEY_SECRET             = 'JWT_SECRET';
 const KEY_TOKEN_LIFESPAN     = 'DEFAULT_TOKEN_LIFESPAN';
 const DEFAULT_TOKEN_LIFESPAN = 48*60*60*1000; // 48-hours
 
-let _config: Configuration;
-
 
 /****************************************************************************
  **                                                                        **
@@ -34,6 +32,8 @@ let _config: Configuration;
 
 export class Token
 {
+  private static _config: Configuration;
+
   private _issuer: string;
   private _subject: string;
   private _issuedAt: number;
@@ -42,6 +42,18 @@ export class Token
   private _jwt: string;
   private _userPayload: any = {};
   private _baked = false;
+
+
+  /****************************************************************************
+   **                                                                        **
+   ** Statics                                                                **
+   **                                                                        **
+   ****************************************************************************/
+
+  static set config(config: Configuration)
+  {
+    Token._config = config;
+  }
 
 
   /****************************************************************************
@@ -190,7 +202,7 @@ export class Token
     }
 
     // Simple validation
-    if (!_config) throw new PancakeError('ERR_NO_CONFIG', 'TOKEN: No registered configuration object.');
+    if (!Token._config) throw new PancakeError('ERR_NO_CONFIG', 'TOKEN: No registered configuration object.');
 
     // Make sure we have everything we need
     this._baked = false;
@@ -202,7 +214,7 @@ export class Token
       throw new PancakeError('ERR_BAD_TOKEN', 'TOKEN: Incomplete token.');
     }
 
-    let tokenLifespan = _config.get(KEY_TOKEN_LIFESPAN);
+    let tokenLifespan = Token._config.get(KEY_TOKEN_LIFESPAN);
     let now = Date.now();
 
     // Set our own fields first...
@@ -227,7 +239,7 @@ export class Token
     // Create the token
     this._jwt = undefined;
     try {
-      this._jwt = jwt.sign(payload, _config.get(KEY_SECRET)).toString();
+      this._jwt = jwt.sign(payload, Token._config.get(KEY_SECRET)).toString();
     }
     catch (err) {}
     if (!this._jwt) {
@@ -246,10 +258,10 @@ export class Token
   thaw(JWT: string)
   {
     // Simple validation
-    if (!_config) throw new PancakeError('ERR_NO_CONFIG', 'TOKEN: No registered configuration object.');
+    if (!Token._config) throw new PancakeError('ERR_NO_CONFIG', 'TOKEN: No registered configuration object.');
 
     // Extract token and copy over attributes
-    let decodedJWT = jwt.verify(JWT, _config.get(KEY_SECRET));
+    let decodedJWT = jwt.verify(JWT, Token._config.get(KEY_SECRET));
     if (decodedJWT) {
 
       // Remember this guy
@@ -297,8 +309,3 @@ export class Token
  ** Tokens API                                                             **
  **                                                                        **
  ****************************************************************************/
-
-export function setConfig(config: Configuration)
-{
-  _config = config;
-}
