@@ -10,6 +10,7 @@ import socketIOClient    = require('socket.io-client');
 import * as utils        from './pancake-utils';
 import { PancakeError }  from './pancake-err';
 import { Configuration } from './pancake-config';
+import { Token }         from './tokens';
 const log = utils.log;
 
 
@@ -50,6 +51,7 @@ export class ClientWebsocketAPI extends EventEmitter
   private _lastError: any;
   protected _baseURL: string;
   protected _socket: any;
+  protected _token: Token;
 
   // Provided by subclasses
   private _serviceName: string;
@@ -154,7 +156,7 @@ export class ClientWebsocketAPI extends EventEmitter
         try {
 
           // Get access to the API
-          socketClient.emit('negotiate', { token: undefined, apiRequests: { name: client._serverAPI, ver: client._serverAPIVer } }, client._timeoutCallback((negotiateResp: any) => {
+          socketClient.emit('negotiate', { token: client._token.jwt, apiRequests: { name: client._serverAPI, ver: client._serverAPIVer } }, client._timeoutCallback((negotiateResp: any) => {
 
             // Timeout?
             if (!(negotiateResp instanceof PancakeError)) {
@@ -252,7 +254,8 @@ export class ClientWebsocketAPI extends EventEmitter
     this._baseURL = URL_HTTP + address + ':' + port;
 
     // Kick it all off
-    return this._connect(true);
+    this._connect(true).catch((err) => { return err; });
+    return;
   }
 
 
@@ -299,7 +302,7 @@ export class ClientWebsocketAPI extends EventEmitter
    **                                                                        **
    ****************************************************************************/
 
-  constructor(serviceName: string, serverAPI: string, serverAPIVer: string, opts?:any)
+  constructor(serviceName: string, serverAPI: string, serverAPIVer: string, token: Token, opts?:any)
   {
     super();
 
@@ -308,6 +311,7 @@ export class ClientWebsocketAPI extends EventEmitter
     this._serviceNameUCase = serviceName.toUpperCase();
     this._serverAPI = serverAPI;
     this._serverAPIVer = serverAPIVer;
+    this._token = token;
 
     // Auto-reconnect?
     if (opts && undefined != opts.tryReconnect) {
@@ -333,6 +337,18 @@ export class ClientWebsocketAPI extends EventEmitter
   // {
   //   super._baseConnect(...);
   // }
+
+  set token(token: Token)
+  {
+    this._token = token;
+  }
+
+
+  get token() : Token
+  {
+    return this._token;
+  }
+
 
   get lastError() : PancakeError
   {

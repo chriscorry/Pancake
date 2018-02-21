@@ -1,7 +1,5 @@
 {
   "global": {
-    "JWT_SECRET": "sjkhdsafk327678324687bjkbbb&^*&^bbdsdkbkdkb",
-    "DEFAULT_TOKEN_LIFESPAN": 900000,
     "MONGODB_DATABASE": "UserRegistry"
   },
   "development": {

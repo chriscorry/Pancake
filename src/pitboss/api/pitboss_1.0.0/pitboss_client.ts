@@ -12,6 +12,7 @@ import { ListenerCallback,
 import { log }                from '../../../util/pancake-utils';
 import { PancakeError }       from '../../../util/pancake-err';
 import { Configuration }      from '../../../util/pancake-config';
+import { Token }              from '../../../util/tokens';
 import { flagpole }           from '../../../flagpole/flagpole';
 
 
@@ -138,9 +139,9 @@ export class PitbossClient extends ClientWebsocketAPI
    **                                                                        **
    ****************************************************************************/
 
-   constructor()
+   constructor(token: Token)
    {
-     super('Pitboss', 'pitboss', '1.0.0');
+     super('Pitboss', 'pitboss', '1.0.0', token);
    }
 
 
@@ -330,10 +331,3 @@ export class PitbossClient extends ClientWebsocketAPI
   }
 
 } // END class PitbossClient
-
-
-// THE client singleton
-export let pitboss: PitbossClient;
-if (!pitboss) {
-  pitboss = new PitbossClient();
-}

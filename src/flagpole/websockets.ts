@@ -247,6 +247,7 @@ export class TransportSocketIO extends EventEmitter implements ITransport
     // Safely try to convert string passed in payload to a Token
     try {
       token = new Token(payload.token);
+      socket.token = token.valid ? token : undefined;
     } catch(err) {
       return [ { status: 'ERR_UNAUTHORIZED', result: { reason: `${API_TAG}: Invalid authorization token.` } } ];
     }

@@ -64,12 +64,6 @@ let AccountSchema = new mongoose.Schema({
 });
 
 
-AccountSchema.statics.setConfig = function(config: Configuration)
-{
-  tokens.setConfig(config);
-}
-
-
 AccountSchema.statics.findByID = async function(id: string) : Promise<any>
 {
   let Account = this;

@@ -9,12 +9,12 @@ import fs                from 'fs';
 import restify           = require('restify');
 import socketIO          = require('socket.io');
 
-import { PitbossClient,
-         pitboss }       from '../pitboss/api/pitboss_1.0.0/pitboss_client';
+import { PitbossClient } from '../pitboss/api/pitboss_1.0.0/pitboss_client';
 import { PancakeError }  from '../util/pancake-err';
 import { log }           from '../util/pancake-utils';
 import { Configuration } from '../util/pancake-config';
 import { grab }          from '../util/pancake-grab';
+import { Token }         from '../util/tokens';
 import { flagpole }      from '../flagpole/flagpole';
 
 
@@ -70,11 +70,15 @@ export async function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
    ****************************************************************************/
 
   // Load up the main server config
+  if (process.env.LOG_LEVEL) log.level = process.env.LOG_LEVEL;
   let config = new Configuration(__dirname + '/../../config/' + serverConfigFileName);
   log.info(`SYRUP: Logging level is ${log.levelAsString}`);
 
   // VARS
   const port = config.get('PORT');
+
+  // Secrets
+  Token.config = config;
 
   // RESTIFY
   // TODO: pass in certs and key for HTTPS
@@ -92,6 +96,14 @@ export async function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
 
   // SOCKET.IO
   let serverSocketIO = socketIO.listen(serverRestify.server);
+
+  // TEMP ***** TEMP ******
+  let token = new Token('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJsa2V5LTEuMC4wIiwic3ViIjoiZW50IiwiaWF0IjoxNTE5MjM3MDE0Nzk5LCJleHAiOjE1MTk0MDk4MTQ3OTksInRvayI6IjA2ZTYyM2ExLTIzNTctNDUyMC1iNzQ4LTBjODVjYTVkMmZkZiIsImFjY250IjoiNWE4Y2MwODAwMTNkZTIzM2UwYTQzMjcyIiwiZW50IjpbeyJkb21haW4iOiJwYW5jYWtlIiwicm9sZSI6InN1cGVyYWRtaW4iLCJ2YWx1ZSI6dHJ1ZX1dfQ.X1trjS-jd7KtTeaaFB0yU131ZLfDqiHMWo9yQDL_wRQ');
+  // let token = new Token();
+  // TEMP ***** TEMP ******
+
+  // PITBOSS
+  let pitboss = new PitbossClient(token);
 
   // FLAGPOLE
   let apiSearchDirs: string = '';

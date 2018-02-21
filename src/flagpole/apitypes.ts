@@ -55,12 +55,12 @@ export function entitledEndpoint(domain: string, roles: any, apiTag: string, end
     return async function(payload: any, token?: Token, headers?: any) : Promise<IEndpointResponse>
     {
       // Expired token check
-      if (token.expired) {
+      if (token && token.expired) {
         return { status: 401, result: { reason: `${apiTag}: Expired authorization token.`, expired: true } };
       }
 
       // Entitlements check
-      if (!entitledMultiple(token, domain, roles as string[])) {
+      if (!token || !entitledMultiple(token, domain, roles as string[])) {
         return { status: 401, result: { reason: `${apiTag}: No entitlement to perform this action.` } };
       }
 
@@ -73,12 +73,12 @@ export function entitledEndpoint(domain: string, roles: any, apiTag: string, end
   return async function(payload: any, token?: Token, headers?: any) : Promise<IEndpointResponse>
   {
     // Expired token check
-    if (token.expired) {
+    if (token && token.expired) {
       return { status: 401, result: { reason: `${apiTag}: Expired authorization token.`, expired: true } };
     }
 
     // Entitlements check
-    if (!entitled(token, domain, roles as string)) {
+    if (!token || !entitled(token, domain, roles as string)) {
       return { status: 401, result: { reason: `${apiTag}: No entitlement to perform this action.` } };
     }
 

@@ -40,9 +40,6 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
   // Initialize our database connection
   if (config) {
 
-    // Set in our configuration object
-    Account.setConfig(config);
-
     // Setup the database
     mongoose.Promise = global.Promise;
     mongoose.connect(config.get('MONGODB_URI')).then(
