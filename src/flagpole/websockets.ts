@@ -8,6 +8,7 @@
 import _              = require('lodash');
 import semver         = require('semver');
 import { EventEmitter }    from 'events';
+import { entitled }        from '../util/entitlements';
 import { Token }           from '../util/tokens';
 import { PancakeError }    from '../util/pancake-err';
 import { IAPI,
@@ -24,6 +25,10 @@ const  log            = utils.log;
  ** Vars & definitions                                                     **
  **                                                                        **
  ****************************************************************************/
+
+ const ENT_DOMAIN         = 'flagpole';
+ const ENT_ROLE_NEGOTIATE = 'negotiate';
+ const API_TAG            = 'FP';
 
 interface VersionInfo
 {
@@ -237,8 +242,24 @@ export class TransportSocketIO extends EventEmitter implements ITransport
   {
     let socket = payload.socket;
     let apiRequests = payload.apiRequests;
-    let token = new Token(payload.token);
-    socket.token = token.valid ? token : undefined;
+    let token: Token;
+
+    // Safely try to convert string passed in payload to a Token
+    try {
+      token = new Token(payload.token);
+    } catch(err) {
+      return [ { status: 'ERR_UNAUTHORIZED', result: { reason: `${API_TAG}: Invalid authorization token.` } } ];
+    }
+
+    // Expired token check
+    if (token.valid && token.expired) {
+      return [ { status: 'ERR_UNAUTHORIZED', result: { reason: `${API_TAG}: Expired authorization token.`, expired: true } } ];
+    }
+
+    // Entitlements check
+    if (!entitled(token, ENT_DOMAIN, ENT_ROLE_NEGOTIATE)) {
+      return [ { status: 'ERR_UNAUTHORIZED', result: { reason: `${API_TAG}: No entitlement to perform this action.` } } ];
+    }
 
     if (this._pendingWSClients.has(socket) || this._currentWSClients.has(socket)) {
 
@@ -311,7 +332,7 @@ export class TransportSocketIO extends EventEmitter implements ITransport
             this._pendingWSClients.delete(socket);
             this._currentWSClients.add(socket);
 
-            status = 'SUCCESS';
+            status = 'OK';
             reason = `Websocket negotiate success. ${name}, v${ver}`;
           }
           else {

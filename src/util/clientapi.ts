@@ -160,7 +160,7 @@ export class ClientWebsocketAPI extends EventEmitter
             if (!(negotiateResp instanceof PancakeError)) {
 
               // Everything okay?
-              if (negotiateResp[0].status === 'SUCCESS') {
+              if (negotiateResp[0].status === 'OK') {
 
                 // We are connected
                 client._postConnect(socketClient);
