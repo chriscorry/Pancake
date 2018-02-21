@@ -8,6 +8,15 @@
         { "ver": "1.0.0", "fileName": "latchkey_1.0.0/latchkey.js" }
       ],
       "metaTags": { "audience": ["client", "server", "tools"], "authenticator": true }
+    },
+    {
+      "name": "accntmgmt",
+      "descriptiveName": "Account Management API",
+      "description": "Account and entitlement services.",
+      "versions": [
+        { "ver": "1.0.0", "fileName": "accntmgmt_1.0.0/accntmgmt.js" }
+      ],
+      "metaTags": { "audience": ["client", "server", "tools"] }
     }
   ]
 }

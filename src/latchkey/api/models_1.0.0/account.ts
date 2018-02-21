@@ -4,16 +4,15 @@
  **                                                                        **
  ****************************************************************************/
 
-const uuidv4    = require('uuid/v4');
 const mongoose  = require('mongoose');
 const validator = require('validator');
 const bcrypt    = require('bcryptjs');
 const _         = require('lodash');
 
-import * as tokens       from '../../../../util/tokens';
-import { log }           from '../../../../util/pancake-utils';
-import { PancakeError }  from '../../../../util/pancake-err';
-import { Configuration } from '../../../../util/pancake-config';
+import * as tokens       from '../../../util/tokens';
+import { log }           from '../../../util/pancake-utils';
+import { PancakeError }  from '../../../util/pancake-err';
+import { Configuration } from '../../../util/pancake-config';
 
 
 /****************************************************************************

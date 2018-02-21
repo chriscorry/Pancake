@@ -13,6 +13,7 @@ cp -f src/screech/api/apiconfig.json dist/screech/api/apiconfig.json
 cp -f src/screech/api/screech_1.0.0/screech.config.json dist/screech/api/screech_1.0.0/screech.config.json
 cp -f src/latchkey/api/apiconfig.json dist/latchkey/api/apiconfig.json
 cp -f src/latchkey/api/latchkey_1.0.0/latchkey.config.json dist/latchkey/api/latchkey_1.0.0/latchkey.config.json
+cp -f src/latchkey/api/accntmgmt_1.0.0/accntmgmt.config.json dist/latchkey/api/accntmgmt_1.0.0/accntmgmt.config.json
 echo 'Building sources...'
 tsc
 echo 'Complete.'
