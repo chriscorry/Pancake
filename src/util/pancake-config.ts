@@ -1,6 +1,8 @@
 import utils = require('./pancake-utils');
 let    log   = utils.log;
 
+const SILENT_TAG = '[silent]';
+
 // Standard environments
 export const ENV_DEV  = 'development';
 export const ENV_TEST = 'test';
@@ -17,9 +19,16 @@ export class Configuration
     if (config) {
       Object.keys(config).forEach((key: string) => {
 
+        // Check for [silent]
+        let originalKey = key;
+        let silent = key.startsWith(SILENT_TAG);
+        if (silent) {
+          key = key.slice(SILENT_TAG.length);
+        }
+
         // Copy over key into the environment
         // (Process environment trumps)
-        let value = process.env[key] ? process.env[key] : config[key];
+        let value = process.env[originalKey] ? process.env[originalKey] : config[originalKey];
         this._configItems.set(key, value);
 
         // Special case for the log level
@@ -28,7 +37,9 @@ export class Configuration
           log.level = value;
         }
 
-        log.trace(`CONFIG: Set '${sectionName}' config value: ${key}=${value}`);
+        if (!silent) {
+          log.trace(`CONFIG: Set '${sectionName}' config value: ${key}=${value}`);
+        }
       });
     }
   }
