@@ -233,11 +233,16 @@ export class ClientWebsocketAPI extends EventEmitter
   }
 
 
-  protected async _baseConnect(address: string, port: number,
+  protected async _baseConnect(address: string, port: number, token?: Token,
                                onConnect: ListenerCallback = undefined,
                                onDisconnect: DisconnectCallback = undefined,
                                opts?: any) : Promise<PancakeError>
   {
+    // Set in the token, if provided
+    if (token && token.valid) {
+      this._token = token;
+    }
+
     // Clean-up
     this._baseClose();
 
@@ -302,7 +307,7 @@ export class ClientWebsocketAPI extends EventEmitter
    **                                                                        **
    ****************************************************************************/
 
-  constructor(serviceName: string, serverAPI: string, serverAPIVer: string, token: Token, opts?:any)
+  constructor(serviceName: string, serverAPI: string, serverAPIVer: string, token?: Token, opts?:any)
   {
     super();
 

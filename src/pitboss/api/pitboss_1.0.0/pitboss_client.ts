@@ -139,7 +139,7 @@ export class PitbossClient extends ClientWebsocketAPI
    **                                                                        **
    ****************************************************************************/
 
-   constructor(token: Token)
+   constructor(token?: Token)
    {
      super('Pitboss', 'pitboss', '1.0.0', token);
    }
@@ -151,13 +151,13 @@ export class PitbossClient extends ClientWebsocketAPI
    **                                                                        **
    ****************************************************************************/
 
-  async connect(address: string, port: number, onConnect: ListenerCallback = undefined, onDisconnect: DisconnectCallback = undefined) : Promise<PancakeError>
+  async connect(address: string, port: number, token?: Token, onConnect: ListenerCallback = undefined, onDisconnect: DisconnectCallback = undefined) : Promise<PancakeError>
   {
-    return this._baseConnect(address, port, onConnect, onDisconnect);
+    return this._baseConnect(address, port, token, onConnect, onDisconnect);
   }
 
 
-  async connectWithConfig(config?: Configuration, onConnect: ListenerCallback = undefined, onDisconnect: DisconnectCallback = undefined) : Promise<PancakeError>
+  async connectWithConfig(config?: Configuration, token?: Token, onConnect: ListenerCallback = undefined, onDisconnect: DisconnectCallback = undefined) : Promise<PancakeError>
   {
     // Simple validation checks
     if (!config && !this._config) {
@@ -165,7 +165,7 @@ export class PitbossClient extends ClientWebsocketAPI
     }
 
     // Extract our config values
-    let address = config.get('PITBOSS_SERVER');
+    let address = config.get('PITBOSS_ADDRESS');
     let port = config.get('PITBOSS_PORT');
     if (!address || !port) {
       return this._processError('ERR_MISSING_CONFIG_INFO', 'PITBOSS: Could not find Pitboss server configuration info.');
@@ -191,7 +191,7 @@ export class PitbossClient extends ClientWebsocketAPI
     let uuidListeners      = this.listeners(MSG_UUID);
 
     // Do the real deal
-    let returnValue = this._baseConnect(address, port, onConnect, onDisconnect);
+    let returnValue = this._baseConnect(address, port, token, onConnect, onDisconnect);
 
     // Add our listeners back
     for (let listener of heartbeatListeners) {

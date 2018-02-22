@@ -199,6 +199,7 @@ export class TransportSocketIO extends EventEmitter implements ITransport
     socket.on('disconnect', (reason: string) : any => {
       this._onDisconnect(reason, socket);
     });
+
     socket.on(EVT_NEGOTIATE, (payload:any, ack:Function) : any => {
       if (payload.apiRequests) {
         let actualPayload = {
@@ -215,9 +216,16 @@ export class TransportSocketIO extends EventEmitter implements ITransport
       ack([ { status: 'ERR_BAD_NEGOTIATE', reason: 'Incorrectly formatted negotiate request.' }]);
       return;
     });
+
     socket.on(EVT_UPDATE_TOKEN, (payload:any, ack:Function) : any => {
-      let token = new Token(payload.token);
-      socket.token = token.valid ? token : undefined;
+      // Safely try to convert string passed in payload to a Token
+      let token: Token;
+      try {
+        token = new Token(payload.token);
+        socket.token = token.valid ? token : undefined;
+      } catch(err) {
+        return { status: 'ERR_UNAUTHORIZED', result: { reason: `${API_TAG}: Invalid authorization token.` } };
+      }
       return { status: 'OK' };
     });
 

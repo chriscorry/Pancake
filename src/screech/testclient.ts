@@ -81,7 +81,7 @@ log.level = 'trace';
 
 async function doIt()
 {
-  await screech.connect('localhost', 3000, () => {
+  await screech.connect('localhost', 3000, undefined, () => {
     console.log('Connected...');
   });
 

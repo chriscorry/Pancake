@@ -84,8 +84,8 @@ function _onRelayGroupChange(msg: any) : void
         let newRelay: IRelayServer = _.pick(msg.server, [
           'name', 'uuid', 'address', 'port'
         ]);
-        newRelay.client = new ScreechClient({ tryReconnect: false });
-        newRelay.client.connect(newRelay.address, newRelay.port, undefined, undefined, true);
+        newRelay.client = new ScreechClient(undefined, { tryReconnect: false });
+        newRelay.client.connect(newRelay.address, newRelay.port, undefined, undefined, undefined, true);
         _relayServers.set(msg.server.uuid, newRelay);
         log.trace(`SCREECH: Added server '${msg.server.uuid}' to relay list.`);
       }
@@ -129,8 +129,8 @@ async function _onNewServerUUID(uuid: string) : Promise<void>
         let newRelay: IRelayServer = _.pick(relay, [
           'name', 'uuid', 'address', 'port'
         ]);
-        newRelay.client = new ScreechClient({ tryReconnect: false });
-        newRelay.client.connect(newRelay.address, newRelay.port, undefined, undefined, true);
+        newRelay.client = new ScreechClient(undefined, { tryReconnect: false });
+        newRelay.client.connect(newRelay.address, newRelay.port, undefined, undefined, undefined, true);
         _relayServers.set(relay.uuid, newRelay);
       }
     });

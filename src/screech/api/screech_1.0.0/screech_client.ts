@@ -8,6 +8,7 @@ import { ListenerCallback,
          DisconnectCallback,
          ClientWebsocketAPI } from '../../../util/clientapi';
 import * as utils             from '../../../util/pancake-utils';
+import { Token }              from '../../../util/tokens';
 import { PancakeError }       from '../../../util/pancake-err';
 import { Configuration }      from '../../../util/pancake-config';
 const log = utils.log;
@@ -140,9 +141,9 @@ export class ScreechClient extends ClientWebsocketAPI
    **                                                                        **
    ****************************************************************************/
 
-   constructor(opts?: any)
+   constructor(token?: Token, opts?: any)
    {
-     super('Screech', 'screech', '1.0.0', opts);
+     super('Screech', 'screech', '1.0.0', token, opts);
    }
 
 
@@ -153,13 +154,14 @@ export class ScreechClient extends ClientWebsocketAPI
    ****************************************************************************/
 
   async connect(address: string, port: number,
+                token?: Token,
                 onConnect: ListenerCallback = undefined,
                 onDisconnect: DisconnectCallback = undefined,
                 relayConnection: boolean = false,
                 opts?: any) : Promise<PancakeError>
   {
     this._relayConnection = relayConnection;
-    return this._baseConnect(address, port, onConnect, onDisconnect, opts);
+    return this._baseConnect(address, port, token, onConnect, onDisconnect, opts);
   }
 
 
