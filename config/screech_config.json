@@ -1,10 +1,10 @@
 {
   "global": {
-    "JWT_SECRET": "v=pvme$1yg%3%%&v84*+-7788sf-xv@#2jjvj(n$0hdw*jj&%2",
+    "[silent]JWT_SECRET": "v=pvme$1yg%3%%&v84*+-7788sf-xv@#2jjvj(n$0hdw*jj&%2",
     "LATCHKEY_ADDRESS": "localhost",
     "LATCHKEY_PORT": 3001,
-    "LATCHKEY_ACCOUNT_EMAIL": "admin@thecorrys.com",
-    "LATCHKEY_ACCOUNT_PASSWORD": "adminpassword",
+    "[silent]LATCHKEY_ACCOUNT_EMAIL": "admin@thecorrys.com",
+    "[silent]LATCHKEY_ACCOUNT_PASSWORD": "adminpassword",
     "LOG_LEVEL": "trace",
     "USE_PITBOSS" : true,
     "PITBOSS_ADDRESS" : "localhost",

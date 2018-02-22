@@ -1,6 +1,6 @@
 {
   "global": {
-    "JWT_SECRET": "v=pvme$1yg%3%%&v84*+-7788sf-xv@#2jjvj(n$0hdw*jj&%2",
+    "[silent]JWT_SECRET": "v=pvme$1yg%3%%&v84*+-7788sf-xv@#2jjvj(n$0hdw*jj&%2",
     "LOG_LEVEL": "trace"
   },
   "test": {
