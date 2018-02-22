@@ -41,6 +41,57 @@ export interface SyrupOpts {
 
 /****************************************************************************
  **                                                                        **
+ ** Private functions                                                      **
+ **                                                                        **
+ ****************************************************************************/
+
+function _setupPitboss(config: Configuration, opts: any, token: Token,
+                       pitboss: PitbossClient,
+                       serverName: string, port: number)
+{
+  let usePitboss = opts ? opts.usePitboss : true;
+  if (usePitboss === undefined) {
+    usePitboss = config.get('USE_PITBOSS');
+  }
+  if (usePitboss === undefined) {
+    usePitboss = true;
+  }
+  if (true === usePitboss) {
+    if (!token) {
+      log.info('SYRUP: Skipping registration with Pitboss due to missing or invalid auth token.');
+    }
+    else {
+      log.info(`SYRUP: Registering with Pitboss...`);
+      pitboss.connectWithConfig(config, token, function connectOnce() {
+        pitboss.registerWithServer(serverName, undefined, port);
+        pitboss.removeListener('connect', connectOnce);
+      });
+    }
+  }
+}
+
+
+async function _getAuthTokenAndSetupPitboss(latchkey: LatchkeyClient,
+                                            accountEmail: string, accountPassword: string,
+                                            config: Configuration, opts: any,
+                                            pitboss: PitbossClient,
+                                            serverName: string, port: number)
+{
+  // Token first...
+  let [err, token] = await grab(latchkey.createToken(accountEmail, accountPassword));
+  if (err) {
+    log.error(`SYRUP: Could not create auth token. ${err.status} ${err.reason}`);
+  }
+
+  // ... then Pitboss
+  else {
+   _setupPitboss(config, opts, token, pitboss, serverName, port);
+  }
+}
+
+
+/****************************************************************************
+ **                                                                        **
  ** GO!                                                                    **
  **                                                                        **
  ****************************************************************************/
@@ -101,6 +152,11 @@ export async function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
   // SOCKET.IO
   let serverSocketIO = socketIO.listen(serverRestify.server);
 
+  // Start processing requests
+  serverRestify.listen(port, () => {
+    log.info(`SYRUP: '${serverRestify.name}' listening on port ${port}...`);
+  });
+
   // PITBOSS
   let pitboss = new PitbossClient();
 
@@ -116,8 +172,62 @@ export async function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
   flagpole.initialize(serverRestify, serverSocketIO, {
     apiSearchDirs,
     envName: config.envName,
-    events: pitboss
+    serverEvents: pitboss
    });
+
+
+   /****************************************************************************
+    **                                                                        **
+    ** LATCHKEY                                                               **
+    **                                                                        **
+    ****************************************************************************/
+
+   let skipAuth = (opts && opts.skipAuth) ? opts.skipAuth : false;
+   let selfAuth = (opts && opts.selfAuth) ? opts.selfAuth : false;
+   let addressLatchkey: string, portLatchkey: number;
+   let accountEmail: string, accountPassword: string;
+   if (!skipAuth) {
+
+     // Get all of our config info squared away
+     if (selfAuth) {
+       addressLatchkey = 'localhost';
+       portLatchkey = port;
+     }
+     else {
+       addressLatchkey = config.get('LATCHKEY_ADDRESS');
+       portLatchkey = config.get('LATCHKEY_PORT');
+     }
+     accountEmail = config.get('LATCHKEY_ACCOUNT_EMAIL');
+     accountPassword = config.get('LATCHKEY_ACCOUNT_PASSWORD');
+
+     // Fire up the client -- if we are selfAuth, we need to make sure we're all
+     // hooked up to the database before requesting the token
+     let latchkey = new LatchkeyClient(addressLatchkey, portLatchkey);
+     if (selfAuth) {
+       flagpole.on('initComplete', async (apiName: string, apiErr: any) => {
+         if ('latchkey' === apiName && !apiErr) {
+
+           // Kick it all off
+           _getAuthTokenAndSetupPitboss(latchkey, accountEmail, accountPassword,
+                                        config, opts,
+                                        pitboss,
+                                        serverName, port);
+         }
+       });
+     }
+
+     // No need to wait
+     else {
+       // Kick it all off
+       _getAuthTokenAndSetupPitboss(latchkey, accountEmail, accountPassword,
+                                    config, opts,
+                                    pitboss,
+                                    serverName, port);
+     }
+   }
+   else {
+     log.info(`SYRUP: Skipping creation of auth token per configuration.`);
+   }
 
 
   /****************************************************************************
@@ -143,68 +253,6 @@ export async function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
     log.error(err);
     log.error('Exiting...');
     process.exit(1);
-  }
-
-  // Start processing requests
-  serverRestify.listen(port, () => {
-    log.info(`SYRUP: '${serverRestify.name}' listening on port ${port}...`);
-  });
-
-
-  /****************************************************************************
-   **                                                                        **
-   ** LATCHKEY                                                               **
-   **                                                                        **
-   ****************************************************************************/
-
-  let addressLatchkey: string, portLatchkey: number;
-  let accountEmail: string, accountPassword: string;
-  if (!opts || !opts.skipAuth) {
-    if (opts && opts.selfAuth) {
-      addressLatchkey = 'localhost';
-      portLatchkey = port;
-    }
-    else {
-      addressLatchkey = config.get('LATCHKEY_ADDRESS');
-      portLatchkey = config.get('LATCHKEY_PORT');
-    }
-    accountEmail = config.get('LATCHKEY_ACCOUNT_EMAIL');
-    accountPassword = config.get('LATCHKEY_ACCOUNT_PASSWORD');
-    let latchkey = new LatchkeyClient(addressLatchkey, portLatchkey);
-    [err, token] = await grab(latchkey.createToken(accountEmail, accountPassword));
-    if (err) {
-      log.error(`SYRUP: Could not create auth token. ${err.status} ${err.reason}`);
-    }
-  }
-  else {
-    log.info(`SYRUP: Skipping creation of auth token per configuration.`);
-  }
-
-
-  /****************************************************************************
-   **                                                                        **
-   ** PITBOSS                                                                **
-   **                                                                        **
-   ****************************************************************************/
-
-  let usePitboss = opts ? opts.usePitboss : true;
-  if (usePitboss === undefined) {
-    usePitboss = config.get('USE_PITBOSS');
-  }
-  if (usePitboss === undefined) {
-    usePitboss = true;
-  }
-  if (true === usePitboss) {
-    if (!token || !token.valid) {
-      log.info('SYRUP: Skipping registration with Pitboss due to missing or invalid auth token.');
-    }
-    else {
-      log.info(`SYRUP: Registering with Pitboss...`);
-      pitboss.connectWithConfig(config, token, function connectOnce() {
-        pitboss.registerWithServer(serverName, undefined, port);
-        pitboss.removeListener('connect', connectOnce);
-      });
-    }
   }
 
 }

@@ -7,6 +7,7 @@
 import _ = require('lodash');
 import * as util             from '../../../util/pancake-utils';
 import { PancakeError }      from '../../../util/pancake-err';
+import { Configuration }     from '../../../util/pancake-config';
 import { grab }              from '../../../util/pancake-grab';
 import { flagpole }          from '../../../flagpole/flagpole';
 const log = util.log;
@@ -72,21 +73,25 @@ function _shutdownServerCallback() : void
  **                                                                        **
  ****************************************************************************/
 
-export function initializeAPI(name: string,
-                              ver: string,
-                              apiToken:string,
-                              config: any,
+export function initializeAPI(name: string, ver: string, apiToken:string,
+                              config: Configuration,
                               opts: any) : PancakeError
 {
+  let eventSinks = opts.initEvents;
+
+  // Setup
   _nameThisAPI       = name;
   _verThisAPI        = ver;
   _serverStart       = Date.now();
   _shutdownCountdown = 0;
 
   // We want to hear about registration events
-  if (opts.events) {
-    opts.events.on('serverUUID', _onNewServerUUID);
+  if (opts && opts.serverEvents) {
+    opts.serverEvents.on('serverUUID', _onNewServerUUID);
   }
+
+  // Let folks know
+  eventSinks.emit('initComplete', 'servermgmt');
 
   return;
 }

@@ -239,7 +239,7 @@ export class ClientWebsocketAPI extends EventEmitter
                                opts?: any) : Promise<PancakeError>
   {
     // Set in the token, if provided
-    if (token && token.valid) {
+    if (token) {
       this._token = token;
     }
 

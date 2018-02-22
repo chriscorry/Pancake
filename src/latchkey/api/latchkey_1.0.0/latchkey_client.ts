@@ -106,9 +106,6 @@ export class LatchkeyClient
       if (!useToken) {
         reject(new PancakeError('ERR_REFRESH_TOKEN', 'LATCHKEY: No token specified to refresh.'));
       }
-      if (!useToken.valid) {
-        reject(new PancakeError('ERR_REFRESH_TOKEN', 'LATCHKEY: Invalid token specified.'));
-      }
 
       // First, register with the server and extract our notary signature
       axios.post(this._baseURL  + URL_REFRESH_TOKEN, { token: useToken.jwt }, HTTP_REQUEST_HEADER)

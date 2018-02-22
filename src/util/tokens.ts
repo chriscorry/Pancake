@@ -32,7 +32,8 @@ const DEFAULT_TOKEN_LIFESPAN = 48*60*60*1000; // 48-hours
 
 export class Token
 {
-  private static _config: Configuration;
+  private static _secret: string;
+  private static _tokenLifespan = DEFAULT_TOKEN_LIFESPAN;
 
   private _issuer: string;
   private _subject: string;
@@ -42,6 +43,7 @@ export class Token
   private _jwt: string;
   private _userPayload: any = {};
   private _baked = false;
+  private _opaque = false;
 
 
   /****************************************************************************
@@ -52,7 +54,22 @@ export class Token
 
   static set config(config: Configuration)
   {
-    Token._config = config;
+    if (config) {
+      Token._secret = config.get(KEY_SECRET);
+      Token._tokenLifespan = config.get(KEY_TOKEN_LIFESPAN);
+    }
+  }
+
+
+  static set secret(secret: string)
+  {
+    Token._secret = secret;
+  }
+
+
+  static set tokenLifespan(tokenLifespan: number)
+  {
+    Token._tokenLifespan = tokenLifespan;
   }
 
 
@@ -64,9 +81,8 @@ export class Token
 
   constructor(JWT?: string)
   {
-    if (JWT) {
-      this.thaw(JWT);
-    }
+    this._jwt = JWT;
+    if (JWT) this._opaque = true;
   }
 
 
@@ -84,6 +100,9 @@ export class Token
 
   get issuer() : string
   {
+    if (this._opaque) {
+      this.thaw(this._jwt);
+    }
     return this._issuer;
   }
 
@@ -93,6 +112,7 @@ export class Token
     if (issuer != this._issuer) {
       this._issuer = issuer;
       this._baked = false;
+      this._opaque = false;
       this._jwt = undefined;
     }
   }
@@ -100,6 +120,9 @@ export class Token
 
   get subject() : string
   {
+    if (this._opaque) {
+      this.thaw(this._jwt);
+    }
     return this._subject;
   }
 
@@ -109,6 +132,7 @@ export class Token
     if (subject != this._subject) {
       this._subject = subject;
       this._baked = false;
+      this._opaque = false;
       this._jwt = undefined;
     }
   }
@@ -116,18 +140,27 @@ export class Token
 
   get issuedAt() : number
   {
+    if (this._opaque) {
+      this.thaw(this._jwt);
+    }
     return this._issuedAt;
   }
 
 
   get expiration() : number
   {
+    if (this._opaque) {
+      this.thaw(this._jwt);
+    }
     return this._expiration;
   }
 
 
   get expired() : boolean
   {
+    if (this._opaque) {
+      this.thaw(this._jwt);
+    }
     if (this._expiration) {
       return this._expiration <= Date.now();
     }
@@ -137,24 +170,43 @@ export class Token
 
   get uuid() : string
   {
+    if (this._opaque) {
+      this.thaw(this._jwt);
+    }
     return this._uuid;
   }
 
 
   get jwt() : string
   {
+    if (this._opaque) {
+      return this._jwt;
+    }
     return this.freeze();
   }
 
 
   set jwt(JWT: string)
   {
-    this.thaw(JWT);
+    this._jwt = JWT;
+    if (JWT) {
+      this._issuer = undefined;
+      this._subject = undefined;
+      this._issuedAt = undefined;
+      this._expiration = undefined;
+      this._uuid = undefined;
+      this._userPayload = {};
+      this._baked = false;
+      this._opaque = true;
+    }
   }
 
 
   get(propName: string) : any
   {
+    if (this._opaque) {
+      this.thaw(this._jwt);
+    }
     switch(propName) {
       case 'iss': return this.issuer;
       case 'sub': return this.subject;
@@ -172,37 +224,54 @@ export class Token
 
   set(propName: string, propValue: any)
   {
+    let dirty = false;
+
     switch(propName) {
-      case 'iss': this.issuer = propValue; break;
-      case 'sub': this.subject = propValue; break;
+      case 'iss':
+        if (this.issuer != propValue) {
+          this.issuer = propValue;
+          dirty = true;
+        }
+        break;
+      case 'sub':
+        if (this.subject != propValue) {
+          this.subject = propValue;
+          dirty = true;
+        }
+        break;
       default:
         if (!this._userPayload) {
           this._userPayload = {};
         }
         if (this._userPayload[propName] != propValue) {
           this._userPayload[propName] = propValue;
-          this._baked = false;
-          this._jwt = undefined;
+          dirty = true;
         }
+    }
+
+    if (dirty) {
+      this._baked = false;
+      this._opaque = false;
+      this._jwt = undefined;
     }
   }
 
 
   isSame(JWT: string) : boolean
   {
-    return (this._baked && JWT === this._jwt) ? true : false;
+    return JWT === this._jwt ? true : false;
   }
 
 
   freeze() : string
   {
     // Quick optimization
-    if (true === this._baked) {
+    if (true === this._baked || true === this._opaque) {
       return this._jwt;
     }
 
     // Simple validation
-    if (!Token._config) throw new PancakeError('ERR_NO_CONFIG', 'TOKEN: No registered configuration object.');
+    if (!Token._secret) throw new PancakeError('ERR_NO_CONFIG', 'TOKEN: No configuration data.');
 
     // Make sure we have everything we need
     this._baked = false;
@@ -214,12 +283,10 @@ export class Token
       throw new PancakeError('ERR_BAD_TOKEN', 'TOKEN: Incomplete token.');
     }
 
-    let tokenLifespan = Token._config.get(KEY_TOKEN_LIFESPAN);
-    let now = Date.now();
-
     // Set our own fields first...
+    let now = Date.now();
     this._issuedAt = now;
-    this._expiration = now + (tokenLifespan || DEFAULT_TOKEN_LIFESPAN);
+    this._expiration = now + (Token._tokenLifespan || DEFAULT_TOKEN_LIFESPAN);
     this._uuid = uuidv4();
 
     // ... then build the payload
@@ -239,7 +306,7 @@ export class Token
     // Create the token
     this._jwt = undefined;
     try {
-      this._jwt = jwt.sign(payload, Token._config.get(KEY_SECRET)).toString();
+      this._jwt = jwt.sign(payload, Token._secret).toString();
     }
     catch (err) {}
     if (!this._jwt) {
@@ -255,13 +322,14 @@ export class Token
   }
 
 
-  thaw(JWT: string)
+  thaw(JWT?: string)
   {
     // Simple validation
-    if (!Token._config) throw new PancakeError('ERR_NO_CONFIG', 'TOKEN: No registered configuration object.');
+    if (!Token._secret) throw new PancakeError('ERR_NO_CONFIG', 'TOKEN: No configuration data.');
 
     // Extract token and copy over attributes
-    let decodedJWT = jwt.verify(JWT, Token._config.get(KEY_SECRET));
+    if (!JWT) JWT = this._jwt;
+    let decodedJWT = jwt.verify(JWT, Token._secret);
     if (decodedJWT) {
 
       // Remember this guy
@@ -275,13 +343,17 @@ export class Token
       this._uuid = decodedJWT.tok;
 
       // Bring over payload fields
-      if (!this.expired) {
+      // NOTE: Don't use this.expired for this expiration check -- we might be 
+      // here because of a call from there
+      if (this._expiration > Date.now()) {
+
         Object.assign(this._userPayload, _.omit(decodedJWT, [
           'iss', 'sub', 'iat', 'exp', 'tok'
         ]));
       }
 
-      // We're baked
+      // We're thawed and baked
+      this._opaque = false;
       this._baked = true;
     }
 
@@ -294,6 +366,7 @@ export class Token
       this._uuid = undefined;
       this._jwt = undefined;
       this._userPayload = {};
+      this._opaque = false;
       this._baked = false;
 
       // Simple validation
@@ -302,10 +375,3 @@ export class Token
   }
 
 } // END class Token
-
-
-/****************************************************************************
- **                                                                        **
- ** Tokens API                                                             **
- **                                                                        **
- ****************************************************************************/

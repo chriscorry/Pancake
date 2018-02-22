@@ -4,6 +4,7 @@
  **                                                                        **
  ****************************************************************************/
 
+import { EventEmitter }    from 'events';
 import path              = require('path');
 import fs                = require('fs');
 import _                 = require('lodash');
@@ -31,7 +32,8 @@ import { TransportSocketIO }   from './websockets';
 export interface IFlagpoleOpts {
   envName?:       string,
   apiSearchDirs?: string,
-  events?:        any
+  serverEvents?:  EventEmitter,
+  initEvents?:    EventEmitter
 }
 
 interface _IApiInfo {
@@ -51,7 +53,7 @@ interface _IApiInfo {
  **                                                                        **
  ****************************************************************************/
 
-export class Flagpole
+export class Flagpole extends EventEmitter
 {
   // Member data
   private _lastError: any;
@@ -141,26 +143,26 @@ export class Flagpole
       if (error instanceof PancakeError) {
         return error;
       }
-      return this._processError('ERR_REGISTER_ROUTE', `Could not register route: "${endpointInfo.requestType}", "${endpointInfo.path}", ${newAPI.ver}`, error);
+      return this._processError('ERR_REGISTER_ROUTE', `Could not register route: '${endpointInfo.requestType}', '${endpointInfo.path}', ${newAPI.ver}`, error);
     }
 
     // Add to the main API collection
     this._registeredAPIsByToken.set(apiToken, newAPI);
-    log.info(`FP: New API "${apiToken}" registered.`);
+    log.info(`FP: New API '${apiToken}' registered.`);
 
     // Let the API know
     if (newAPI.apiHandler.initializeAPI) {
       log.trace(`FP: Calling API initializer`);
       let err = newAPI.apiHandler.initializeAPI(name, ver, apiToken, config, this._opts);
       if (err) {
-        return this._processError('ERR_INIT_API', `Encountered fatal error initializing API "${name}"`, err);
+        return this._processError('ERR_INIT_API', `Encountered fatal error initializing API '${name}'`, err);
       }
     }
     for (let transport of this._transports) {
       if (transport.registerAPI) {
         let err = transport.registerAPI(newAPI.apiHandler);
         if (err) {
-          return this._processError('ERR_INIT_API', `Enountered fatal error initializing transport for API "${name}"`, err);
+          return this._processError('ERR_INIT_API', `Enountered fatal error initializing transport for API '${name}'`, err);
         }
       }
     }
@@ -275,7 +277,8 @@ export class Flagpole
   initialize(serverRestify: any, serverSocketIO: any, opts: IFlagpoleOpts) : void
   {
     // Remember our opts
-    this._opts = opts;
+    this._opts = opts ? opts : {};
+    this._opts.initEvents = this;
 
     // Initialize our REST transport
     let transportREST = new TransportREST();

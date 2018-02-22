@@ -91,9 +91,10 @@ export class TransportREST implements ITransport
           async (req: any, res: any, next: Function) : Promise<any> => {
             let apiRes: IEndpointResponse;
             try {
-                let token = new Token(req.headers['x-auth']);
+                let xauth = req.headers['x-auth'];
+                let token = xauth ? new Token(xauth) : undefined;
                 let payload = this._buildPayload(req);
-                apiRes = await endpointInfo.handler(payload, token.valid ? token : undefined, req.headers);
+                apiRes = await endpointInfo.handler(payload, token, req.headers);
                 if (apiRes.header && apiRes.header.name && apiRes.header.data) {
                   res.header(apiRes.header.name, apiRes.header.data);
                 }

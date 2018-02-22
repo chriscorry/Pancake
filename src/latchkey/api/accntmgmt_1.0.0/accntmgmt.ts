@@ -41,8 +41,10 @@ let _db = mongoose.connection;
  ****************************************************************************/
 
 export function initializeAPI(name: string, ver: string, apiToken:string,
-                              config: Configuration) : PancakeError
+                              config: Configuration,
+                              opts: any) : PancakeError
 {
+  let eventSinks                  = opts.initEvents;
   let maintenanceInterval: number = config ? config.get('MAINTENANCE_INTERVAL') : 60*5;
 
   // Initialize our database connection
@@ -55,12 +57,14 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
       // Okay, good to go
       () => {
         log.trace(`MONGO: AccountMgmt attached to database '${config.get('MONGODB_DATABASE')}' (${config.get('MONGODB_URI')}).`);
+        eventSinks.emit('initComplete', 'accntmgmt');
       },
 
       // Catch any errors
       (err: any) => {
         _db = undefined;
         log.trace('MONGO: Could not connect AccountMgmt to Mongo database.', err);
+        eventSinks.emit('initComplete', 'accntmgmt', err);
       });
   }
 

@@ -71,8 +71,10 @@ let _lastError: any;
  ****************************************************************************/
 
 export function initializeAPI(name: string, ver: string, apiToken:string,
-                              config: Configuration) : PancakeError
+                              config: Configuration,
+                              opts: any) : PancakeError
 {
+  let eventSinks       = opts.initEvents;
   _maintenanceInterval = (config ? config.get('HEARTBEAT_INTERVAL') : HEARTBEAT_INTERVAL)*1000;
   _heartbeatThreshold  = config ? config.get('HEARTBEAT_THRESHOLD') : HEARTBEAT_THRESHOLD;
 
@@ -94,6 +96,9 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
     clearTimeout(_timerID);
   }
   _timerID = setTimeout(_performMaintenance, _maintenanceInterval);
+
+  // Let folks know
+  eventSinks.emit('initComplete', 'pitboss');
 
   return;
 }

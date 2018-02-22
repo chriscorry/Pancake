@@ -71,8 +71,10 @@ let IdentityFactory = {
 
 
 export function initializeAPI(name: string, ver: string, apiToken:string,
-                              config: Configuration) : PancakeError
+                              config: Configuration,
+                              opts: any) : PancakeError
 {
+  let eventSinks                  = opts.initEvents;
   let maintenanceInterval: number = config ? config.get('MAINTENANCE_INTERVAL') : 60*5;
   let maxCacheSize: number        = config ? config.get('MAX_CACHE_SIZE') : 100;
   let defaultTTL: number          = config ? config.get('DEFAULT_TTL') : cache.DEFAULT_TTL;
@@ -83,6 +85,9 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
 
   // Fire up the cache
   cache.initialize({ maintenanceInterval, maxCacheSize });
+
+  // Let folks know
+  eventSinks.emit('initComplete', 'valet');
 
   return;
 }
