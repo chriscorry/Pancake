@@ -39,7 +39,7 @@ export class Token
   private _subject: string;
   private _issuedAt: number;
   private _expiration: number;
-  private _uuid: string;
+  private _jti: string;
   private _jwt: string;
   private _userPayload: any = {};
   private _baked = false;
@@ -173,7 +173,7 @@ export class Token
     if (this._opaque) {
       this.thaw(this._jwt);
     }
-    return this._uuid;
+    return this._jti;
   }
 
 
@@ -194,7 +194,7 @@ export class Token
       this._subject = undefined;
       this._issuedAt = undefined;
       this._expiration = undefined;
-      this._uuid = undefined;
+      this._jti = undefined;
       this._userPayload = {};
       this._baked = false;
       this._opaque = true;
@@ -212,7 +212,7 @@ export class Token
       case 'sub': return this.subject;
       case 'iat': return this.issuedAt;
       case 'exp': return this.expiration;
-      case 'tok': return this.uuid;
+      case 'jti': return this.uuid;
       default:
         if (this._userPayload) {
           return this._userPayload[propName];
@@ -278,7 +278,7 @@ export class Token
     if (!this._issuer || !this._subject) {
       this._issuedAt = undefined;
       this._expiration = undefined;
-      this._uuid = undefined;
+      this._jti = undefined;
       this._jwt = undefined;
       throw new PancakeError('ERR_BAD_TOKEN', 'TOKEN: Incomplete token.');
     }
@@ -287,7 +287,7 @@ export class Token
     let now = Date.now();
     this._issuedAt = now;
     this._expiration = now + (Token._tokenLifespan || DEFAULT_TOKEN_LIFESPAN*60*1000); // In ms
-    this._uuid = uuidv4();
+    this._jti = uuidv4();
 
     // ... then build the payload
     let payload: any = {
@@ -295,12 +295,12 @@ export class Token
       sub: this._subject,
       iat: this._issuedAt,
       exp: this._expiration,
-      tok: this._uuid
+      jti: this._jti
     };
 
     // Add the user payload, taking care to not overwrite existing peoperties
     Object.assign(payload, _.omit(this._userPayload, [
-      'iss', 'sub', 'iat', 'exp', 'tok'
+      'iss', 'sub', 'iat', 'exp', 'jti'
     ]));
 
     // Create the token
@@ -312,7 +312,7 @@ export class Token
     if (!this._jwt) {
       this._issuedAt = undefined;
       this._expiration = undefined;
-      this._uuid = undefined;
+      this._jti = undefined;
       throw new PancakeError('ERR_BAD_TOKEN', 'TOKEN: Failed signature.');
     }
 
@@ -340,7 +340,7 @@ export class Token
       this._subject = decodedJWT.sub;
       this._issuedAt = decodedJWT.iat;
       this._expiration= decodedJWT.exp;
-      this._uuid = decodedJWT.tok;
+      this._jti = decodedJWT.jti;
 
       // Bring over payload fields
       // NOTE: Don't use this.expired for this expiration check -- we might be
@@ -348,7 +348,7 @@ export class Token
       if (this._expiration > Date.now()) {
 
         Object.assign(this._userPayload, _.omit(decodedJWT, [
-          'iss', 'sub', 'iat', 'exp', 'tok'
+          'iss', 'sub', 'iat', 'exp', 'jti'
         ]));
       }
 
@@ -363,7 +363,7 @@ export class Token
       this._subject = undefined;
       this._issuedAt = undefined;
       this._expiration = undefined;
-      this._uuid = undefined;
+      this._jti = undefined;
       this._jwt = undefined;
       this._userPayload = {};
       this._opaque = false;
