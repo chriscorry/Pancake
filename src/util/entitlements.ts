@@ -27,15 +27,9 @@ export interface IEntitlement
  **                                                                        **
  ****************************************************************************/
 
-export function entitled(token: Token, domain: string, role: string)
+export function entitled(token: Token, domain: string, roles: any)
 {
-  let ent = new Entitlements(token, domain);
-  return ent.isSuperAdmin || ent.satisfies(role);
-}
-
-
-export function entitledMultiple(token: Token, domain: string, roles: string[])
-{
+  if (!Array.isArray(roles)) roles = [ roles ];
   let ent = new Entitlements(token, domain);
   for (let role of roles) {
     if (ent.satisfies(role))
