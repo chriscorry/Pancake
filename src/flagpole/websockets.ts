@@ -4,7 +4,6 @@
  **                                                                        **
  ****************************************************************************/
 
-// import socketIO       = require('socket.io');
 import _              = require('lodash');
 import semver         = require('semver');
 import { EventEmitter }    from 'events';
@@ -26,9 +25,9 @@ const  log            = utils.log;
  **                                                                        **
  ****************************************************************************/
 
- const ENT_DOMAIN         = 'flagpole';
- const ENT_ROLE_NEGOTIATE = 'negotiate';
- const API_TAG            = 'FP';
+const ENT_DOMAIN         = 'flagpole';
+const ENT_ROLE_NEGOTIATE = 'negotiate';
+const API_TAG            = 'FP';
 
 interface VersionInfo
 {
@@ -36,9 +35,12 @@ interface VersionInfo
   endpoints: IEndpointInfo[]
 }
 
- //Events
- const EVT_NEGOTIATE    = 'negotiate';
- const EVT_UPDATE_TOKEN = 'updateToken';
+//Events
+const EVT_CONNECT      = 'connect';
+const EVT_CONNECTION   = 'connection';
+const EVT_DISCONNECT   = 'disconnect';
+const EVT_NEGOTIATE    = 'negotiate';
+const EVT_UPDATE_TOKEN = 'updateToken';
 
 
 /****************************************************************************
@@ -74,7 +76,7 @@ export class TransportSocketIO extends EventEmitter implements ITransport
     if (initInfo.envName) this._envName = initInfo.envName;
 
     // We need to hear about connects
-    this._serverSocketIO.sockets.on('connection', this._onConnect.bind(this));
+    this._serverSocketIO.sockets.on(EVT_CONNECTION, this._onConnect.bind(this));
   }
 
 
@@ -82,10 +84,10 @@ export class TransportSocketIO extends EventEmitter implements ITransport
   {
     // Register event handlers, if they exist
     if (regAPI.onConnect) {
-      this.on('connect', regAPI.onConnect);
+      this.on(EVT_CONNECT, regAPI.onConnect);
     }
     if (regAPI.onDisconnect) {
-      this.on('disconnect', regAPI.onDisconnect);
+      this.on(EVT_DISCONNECT, regAPI.onDisconnect);
     }
     return;
   }
@@ -95,10 +97,10 @@ export class TransportSocketIO extends EventEmitter implements ITransport
   {
     // Unregister event handlers, if they exist
     if (unregAPI.onConnect) {
-      this.removeListener('connect', unregAPI.onConnect);
+      this.removeListener(EVT_CONNECT, unregAPI.onConnect);
     }
     if (unregAPI.onDisconnect) {
-      this.removeListener('disconnect', unregAPI.onConnect);
+      this.removeListener(EVT_DISCONNECT, unregAPI.onConnect);
     }
     return;
   }
@@ -195,8 +197,8 @@ export class TransportSocketIO extends EventEmitter implements ITransport
     this._pendingWSClients.add(socket);
     log.trace(`FP: Websocket connect. (${socket.id})`);
 
-    // Register our interest in disconnect and negotiation events
-    socket.on('disconnect', (reason: string) : any => {
+    // Register our interest in various events
+    socket.on(EVT_DISCONNECT, (reason: string) : any => {
       this._onDisconnect(reason, socket);
     });
 
@@ -222,7 +224,7 @@ export class TransportSocketIO extends EventEmitter implements ITransport
       let token: Token;
       try {
         token = new Token(payload.token);
-        socket.token = token.valid ? token : undefined;
+        socket.token = token;
       } catch(err) {
         return { status: 'ERR_UNAUTHORIZED', result: { reason: `${API_TAG}: Invalid authorization token.` } };
       }
@@ -230,7 +232,7 @@ export class TransportSocketIO extends EventEmitter implements ITransport
     });
 
     // Let anyone else know who cares
-    this.emit('connect', socket);
+    this.emit(EVT_CONNECT, socket);
     return;
   }
 
@@ -242,7 +244,7 @@ export class TransportSocketIO extends EventEmitter implements ITransport
     log.trace(`FP: Websocket disconnect. (${socket.id})`);
 
     // Let anyone else know who cares
-    this.emit('disconnect', socket);
+    this.emit(EVT_DISCONNECT, socket);
   }
 
 

@@ -203,6 +203,7 @@ export async function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
      // Fire up the client -- if we are selfAuth, we need to make sure we're all
      // hooked up to the database before requesting the token
      let latchkey = new LatchkeyClient(addressLatchkey, portLatchkey);
+     latchkey.linkClientAPI(pitboss);
      if (selfAuth) {
        flagpole.on('initComplete', async (apiName: string, apiErr: any) => {
          if ('latchkey' === apiName && !apiErr) {

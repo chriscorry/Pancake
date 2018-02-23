@@ -20,6 +20,13 @@ const log = utils.log;
  **                                                                        **
  ****************************************************************************/
 
+// EVENTS
+const EVT_CONNECT        = 'connect';
+const EVT_DISCONNECT     = 'disconnect';
+const EVT_NEGOTIATE      = 'negotiate';
+const EVT_EXPIRED_TOKEN  = 'expiredToken';
+const EVT_UPDATE_TOKEN   = 'updateToken';
+
 // URLs
 const URL_HTTP           = 'http://';
 const URL_HTTPS          = 'https://';
@@ -45,6 +52,7 @@ export class ClientWebsocketAPI extends EventEmitter
 {
   private _connected = false;
   private _reconnecting = false;
+  private _expiredToken = false;
   private _reconnectInterval = RECONNECT_INTERVAL;
   private _tryReconnect = true;
   private _timerID: NodeJS.Timer;
@@ -66,10 +74,18 @@ export class ClientWebsocketAPI extends EventEmitter
    **                                                                        **
    ****************************************************************************/
 
+  private _onExpiredToken(socket: any) : void
+  {
+    // Let everyone know
+    log.info(`${this._serviceNameUCase}: Authentication token has expired.`);
+    this._signalExpiredToken();
+  }
+
+
   private _onDisconnect(socket: any) : void
   {
     // Let everyone know
-    this.emit('disconnect', socket);
+    this.emit(EVT_DISCONNECT, socket);
     if (true === this._tryReconnect) {
       log.info(`${this._serviceNameUCase}: Lost connection to ${this._serviceName} server. Will attempt to reconnect in ${this._reconnectInterval} sec.`);
     }
@@ -127,13 +143,14 @@ export class ClientWebsocketAPI extends EventEmitter
     this._cancelReconnects();
 
     // Make sure we receive important notifications
-    this._socket.on('disconnect', () => { this._onDisconnect(socket); });
+    this._socket.on(EVT_DISCONNECT, () => { this._onDisconnect(socket); });
+    this._socket.on(EVT_EXPIRED_TOKEN, () => { this._onExpiredToken(socket); });
 
     // Hook everything back up again
     this._performPostConnectTasks(reconnecting);
 
     // Let everyone know
-    this.emit('connect');
+    this.emit(EVT_CONNECT);
   }
 
 
@@ -156,7 +173,7 @@ export class ClientWebsocketAPI extends EventEmitter
         try {
 
           // Get access to the API
-          socketClient.emit('negotiate', { token: client._token.jwt, apiRequests: { name: client._serverAPI, ver: client._serverAPIVer } }, client._timeoutCallback((negotiateResp: any) => {
+          socketClient.emit(EVT_NEGOTIATE, { token: client._token.jwt, apiRequests: { name: client._serverAPI, ver: client._serverAPIVer } }, client._timeoutCallback((negotiateResp: any) => {
 
             // Timeout?
             if (!(negotiateResp instanceof PancakeError)) {
@@ -202,24 +219,24 @@ export class ClientWebsocketAPI extends EventEmitter
    **                                                                        **
    ****************************************************************************/
 
-   protected _timeoutCallback(callback: Function) : () => void
-   {
-     let called = false;
+  protected _timeoutCallback(callback: Function) : () => void
+  {
+    let called = false;
 
-     let timerID = setTimeout(() => {
-       if (called) return;
-         called = true;
-         callback(new PancakeError('ERR_CALLBACK_TIMEOUT'));
-     },
-     CONNECT_TIMEOUT*1000);
+    let timerID = setTimeout(() => {
+      if (called) return;
+        called = true;
+        callback(new PancakeError('ERR_CALLBACK_TIMEOUT'));
+      },
+      CONNECT_TIMEOUT*1000);
 
-     return function() {
-       if (called) return;
-       called = true;
-       clearTimeout(timerID);
-       callback.apply(this, arguments);
-     }
-   }
+      return function() {
+        if (called) return;
+        called = true;
+        clearTimeout(timerID);
+        callback.apply(this, arguments);
+      }
+  }
 
 
   protected _processError(status: string, reason?: string, obj?: any, logError: boolean = true) : PancakeError
@@ -252,8 +269,8 @@ export class ClientWebsocketAPI extends EventEmitter
     }
 
     // Remember these callbacks
-    if (onConnect) this.on('connect', onConnect);
-    if (onDisconnect) this.on('disconnect', onDisconnect);
+    if (onConnect) this.on(EVT_CONNECT, onConnect);
+    if (onDisconnect) this.on(EVT_DISCONNECT, onDisconnect);
 
     // Build our URL
     this._baseURL = URL_HTTP + address + ':' + port;
@@ -280,6 +297,21 @@ export class ClientWebsocketAPI extends EventEmitter
 
     // Clear out old event handlers
     this.removeAllListeners();
+  }
+
+
+  protected _signalExpiredToken() : void
+  {
+    this._expiredToken = true;
+    this.emit(EVT_EXPIRED_TOKEN, this._token, this);
+  }
+
+
+  protected _updateConnectionToken() : void
+  {
+    if (this._connected) {
+      this._socket.emit(EVT_UPDATE_TOKEN, { token: this._token.jwt });
+    }
   }
 
 
@@ -346,6 +378,8 @@ export class ClientWebsocketAPI extends EventEmitter
   set token(token: Token)
   {
     this._token = token;
+    this._expiredToken = false;
+    this._updateConnectionToken();
   }
 
 

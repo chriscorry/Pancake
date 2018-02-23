@@ -8,6 +8,7 @@ import axios                  from 'axios';
 import { log }                from '../../../util/pancake-utils';
 import { PancakeError }       from '../../../util/pancake-err';
 import { Token }              from '../../../util/tokens';
+import { ClientWebsocketAPI } from '../../../util/clientapi';
 
 
 /****************************************************************************
@@ -16,10 +17,13 @@ import { Token }              from '../../../util/tokens';
  **                                                                        **
  ****************************************************************************/
 
-const URL_HTTP            = 'http://';
-const URL_HTTPS           = 'https://';
-const URL_CREATE_TOKEN    = '/latchkey/token';
-const URL_REFRESH_TOKEN   = '/latchkey/refresh';
+// EVENTS
+const EVT_EXPIRED_TOKEN  = 'expiredToken';
+
+const URL_HTTP           = 'http://';
+const URL_HTTPS          = 'https://';
+const URL_CREATE_TOKEN   = '/latchkey/token';
+const URL_REFRESH_TOKEN  = '/latchkey/refresh';
 
  const HTTP_REQUEST_HEADER = {
    headers: { 'Content-Type': 'application/json', 'Accept-Version': "1" }
@@ -39,11 +43,24 @@ export class LatchkeyClient
   private _port: number;
   private _baseURL: string;
 
+
   /****************************************************************************
    **                                                                        **
    ** Private methods                                                        **
    **                                                                        **
    ****************************************************************************/
+
+  private _onExpiredToken(oldToken: Token, clientAPI: ClientWebsocketAPI)
+  {
+    this.refreshToken(oldToken).then(
+      (newToken: Token) => {
+        clientAPI.token = newToken;
+      },
+
+      (err: any) => {
+        log.trace('LATCHKEY: Encountered error refreshing expired token.', err);
+      });
+  }
 
 
   /****************************************************************************
@@ -70,6 +87,22 @@ export class LatchkeyClient
   {
       return this._token;
   }
+
+
+  linkClientAPI(clientAPI: ClientWebsocketAPI) : void
+  {
+    clientAPI.on(EVT_EXPIRED_TOKEN, (oldToken: Token, clientAPI: ClientWebsocketAPI) => {
+      this._onExpiredToken(oldToken, clientAPI);
+    });
+  }
+
+
+  // unlinkClientAPI(clientAPI: ClientWebsocketAPI) : void
+  // {
+  //   clientAPI.emit(EVT_EXPIRED_TOKEN, (oldToken: Token, clientAPI: ClientWebsocketAPI) => {
+  //     this._onExpiredToken(oldToken, clientAPI);
+  //   });
+  // }
 
 
   async createToken(email: string, password: string) : Promise<Token>
