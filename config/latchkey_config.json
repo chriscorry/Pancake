@@ -16,6 +16,6 @@
   "test": {
   },
   "development": {
-    "DEFAULT_TOKEN_LIFESPAN": 15,
+    "DEFAULT_TOKEN_LIFESPAN": 15
   }
 }
