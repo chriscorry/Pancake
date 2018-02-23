@@ -1,5 +1,6 @@
 {
   "global": {
+    "PORT": 3001,
     "[silent]JWT_SECRET": "v=pvme$1yg%3%%&v84*+-7788sf-xv@#2jjvj(n$0hdw*jj&%2",
     "LATCHKEY_ADDRESS": "localhost",
     "LATCHKEY_PORT": 3001,
@@ -14,9 +15,7 @@
     ]
   },
   "test": {
-    "PORT": 3000
   },
   "development": {
-    "PORT": 3000
   }
 }

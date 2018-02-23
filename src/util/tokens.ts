@@ -21,7 +21,7 @@ import { Configuration } from './pancake-config';
 
 const KEY_SECRET             = 'JWT_SECRET';
 const KEY_TOKEN_LIFESPAN     = 'DEFAULT_TOKEN_LIFESPAN';
-const DEFAULT_TOKEN_LIFESPAN = 48*60*60*1000; // 48-hours
+const DEFAULT_TOKEN_LIFESPAN = 24*60; // 24-hours, in minutes
 
 
 /****************************************************************************
@@ -33,7 +33,7 @@ const DEFAULT_TOKEN_LIFESPAN = 48*60*60*1000; // 48-hours
 export class Token
 {
   private static _secret: string;
-  private static _tokenLifespan = DEFAULT_TOKEN_LIFESPAN;
+  private static _tokenLifespan = DEFAULT_TOKEN_LIFESPAN*60*1000; // In ms
 
   private _issuer: string;
   private _subject: string;
@@ -56,7 +56,7 @@ export class Token
   {
     if (config) {
       Token._secret = config.get(KEY_SECRET);
-      Token._tokenLifespan = config.get(KEY_TOKEN_LIFESPAN);
+      Token._tokenLifespan = config.get(KEY_TOKEN_LIFESPAN)*60*1000; // In ms
     }
   }
 
@@ -67,9 +67,9 @@ export class Token
   }
 
 
-  static set tokenLifespan(tokenLifespan: number)
+  static set tokenLifespan(tokenLifespan: number) // In minutes
   {
-    Token._tokenLifespan = tokenLifespan;
+    Token._tokenLifespan = tokenLifespan*60*1000; // In ms
   }
 
 
@@ -286,7 +286,7 @@ export class Token
     // Set our own fields first...
     let now = Date.now();
     this._issuedAt = now;
-    this._expiration = now + (Token._tokenLifespan || DEFAULT_TOKEN_LIFESPAN);
+    this._expiration = now + (Token._tokenLifespan || DEFAULT_TOKEN_LIFESPAN*60*1000); // In ms
     this._uuid = uuidv4();
 
     // ... then build the payload
@@ -343,7 +343,7 @@ export class Token
       this._uuid = decodedJWT.tok;
 
       // Bring over payload fields
-      // NOTE: Don't use this.expired for this expiration check -- we might be 
+      // NOTE: Don't use this.expired for this expiration check -- we might be
       // here because of a call from there
       if (this._expiration > Date.now()) {
 

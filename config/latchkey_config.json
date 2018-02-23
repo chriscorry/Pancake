@@ -1,7 +1,8 @@
 {
   "global": {
+    "PORT": 3500,
     "[silent]JWT_SECRET": "v=pvme$1yg%3%%&v84*+-7788sf-xv@#2jjvj(n$0hdw*jj&%2",
-    "[silent]DEFAULT_TOKEN_LIFESPAN": 172800000,
+    "[silent]DEFAULT_TOKEN_LIFESPAN": 1440,
     "[silent]LATCHKEY_ACCOUNT_EMAIL": "admin@thecorrys.com",
     "[silent]LATCHKEY_ACCOUNT_PASSWORD": "adminpassword",
     "LOG_LEVEL": "trace",
@@ -13,9 +14,8 @@
     ]
   },
   "test": {
-    "PORT": 3001
   },
   "development": {
-    "PORT": 3001
+    "DEFAULT_TOKEN_LIFESPAN": 15,
   }
 }
