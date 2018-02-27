@@ -97,16 +97,11 @@ async function _refreshToken(payload: any, currToken: Token) : Promise<IEndpoint
 
   // Safely try to convert string passed in payload to a Token
   try {
-    oldToken = new Token(payload.token);
+    oldToken = payload.token ? new Token(payload.token) : currToken;
   } catch(err) {
-    oldToken = new Token();
+    oldToken = currToken || new Token();
   }
-
-  // Pull token from header?
-  if (!oldToken.valid && currToken && currToken.valid) {
-    oldToken = currToken;
-  }
-  if (!oldToken.valid) {
+  if (!oldToken.jwt) {
     return { status: 400, result: new PancakeError('ERR_NO_TOKEN', 'LATCHKEY: No valid token specified in request to refresh.') };
   }
 

@@ -56,15 +56,16 @@ export class LatchkeyClient
    **                                                                        **
    ****************************************************************************/
 
-  private _onExpiredToken(oldToken: Token, clientAPI: ClientWebsocketAPI)
+  private _onExpiredToken(oldToken: Token, clientAPI: ClientWebsocketAPI) : void
   {
     this.refreshToken(oldToken).then(
       (newToken: Token) => {
         clientAPI.token = newToken;
+        log.info('LATCHKEY: Expired token successfully refreshed.');
       },
 
       (err: any) => {
-        log.trace('LATCHKEY: Encountered error refreshing expired token.', err);
+        log.error('LATCHKEY: Encountered error refreshing expired token.', err);
       });
   }
 

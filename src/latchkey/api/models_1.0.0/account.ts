@@ -113,8 +113,8 @@ AccountSchema.statics.findByToken = async function(token: tokens.Token) : Promis
   let Account = this;
 
   try {
-    if (token.valid)
-      return Account.findByID(token.get('accnt'));
+    let uuid = token.get('accnt');
+    return Account.findByID(uuid);
   }
   catch (err) {}
 

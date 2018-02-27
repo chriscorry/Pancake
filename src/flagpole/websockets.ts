@@ -259,7 +259,7 @@ export class TransportSocketIO extends EventEmitter implements ITransport
       token = new Token(payload.token);
       socket.token = token;
     } catch(err) {
-      return [ { status: 'ERR_UNAUTHORIZED', result: { reason: `${API_TAG}: Invalid authorization token.` } } ];
+      return [ { status: 'ERR_UNAUTHORIZED', result: { reason: `${API_TAG}: Invalid authorization token.`, expired: false } } ];
     }
 
     // Expired token check
@@ -269,7 +269,7 @@ export class TransportSocketIO extends EventEmitter implements ITransport
 
     // Entitlements check
     if (!entitled(token, ENT_DOMAIN, ENT_ROLE_NEGOTIATE)) {
-      return [ { status: 'ERR_UNAUTHORIZED', result: { reason: `${API_TAG}: No entitlement to perform this action.` } } ];
+      return [ { status: 'ERR_UNAUTHORIZED', result: { reason: `${API_TAG}: No entitlement to perform this action.`, expired: false } } ];
     }
 
     if (this._pendingWSClients.has(socket) || this._currentWSClients.has(socket)) {

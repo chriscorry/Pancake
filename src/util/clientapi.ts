@@ -179,12 +179,26 @@ export class ClientWebsocketAPI extends EventEmitter
             if (!(negotiateResp instanceof PancakeError)) {
 
               // Everything okay?
-              if (negotiateResp[0].status === 'OK') {
+              if ('OK' === negotiateResp[0].status) {
 
                 // We are connected
                 client._postConnect(socketClient);
                 resolve();
               }
+
+              // Expired token?
+              else if ('ERR_UNAUTHORIZED' === negotiateResp[0].status && true === negotiateResp[0].result.expired) {
+
+                // We're going to have to refresh our token
+                client._onExpiredToken(undefined);
+
+                // ... and then try again
+                socketClient.close();
+                socketClient = undefined;
+                client._initiateReconnects(_innerConnect, true);
+              }
+
+              // Something else bad -- fatal!
               else if (true === logErrors) {
                 reject(client._processError('ERR_CLIENT_NEGOTIATE', `${client._serviceNameUCase}: Could not negotiate ${client._serviceName} API with server`, negotiateResp[0]));
               }
@@ -295,8 +309,9 @@ export class ClientWebsocketAPI extends EventEmitter
     // Clear out active domains, channels, and subscriptions
     this._performConnectCleanup();
 
-    // Clear out old event handlers
-    this.removeAllListeners();
+    // Clear out old (dis)connect handlers
+    this.removeAllListeners(EVT_CONNECT);
+    this.removeAllListeners(EVT_DISCONNECT);
   }
 
 

@@ -92,8 +92,17 @@ async function _createAccount(payload: any, token: Token) : Promise<IEndpointRes
   if (err) {
     return { status: 400, result: err };
   }
-  return { status: 200, result: { token: newToken.jwt } };
+  return { status: 200, result: { id: account._id, token: newToken.jwt } };
 }
+
+
+async function _getEntitlements(payload: any, token: Token) : Promise<IEndpointResponse>
+{
+  return { status: 200, result: { } };
+}
+
+
+
 
 
 /****************************************************************************
