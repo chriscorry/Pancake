@@ -22,6 +22,7 @@ import { entitledEndpoint,
  **                                                                        **
  ****************************************************************************/
 
+// ENTITLEMENTS
 const ENT_DOMAIN       = 'servermgmt';
 const ENT_ROLE_ADMIN   = 'admin';
 const ENT_ROLE_CLIENT  = 'client';
@@ -36,6 +37,7 @@ let _nameThisAPI: string;
 let _verThisAPI: string;
 let _serverStart: number;
 let _uuid: string;
+let _connectedSocketCnt = 0;
 let _shutdownCountdown: number = 0;
 let _timerID: NodeJS.Timer;
 
@@ -69,7 +71,7 @@ function _shutdownServerCallback() : void
 
 /****************************************************************************
  **                                                                        **
- ** Management API                                                         **
+ ** Framework callbacks                                                    **
  **                                                                        **
  ****************************************************************************/
 
@@ -96,6 +98,26 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
   return;
 }
 
+
+export function onConnect(socket: any) : PancakeError
+{
+  _connectedSocketCnt++;
+  return;
+}
+
+
+export function onDisconnect(socket: any) : PancakeError
+{
+  _connectedSocketCnt--;
+  return;
+}
+
+
+/****************************************************************************
+ **                                                                        **
+ ** Management API                                                         **
+ **                                                                        **
+ ****************************************************************************/
 
 function _shutdown(payload: any) : IEndpointResponse
 {
@@ -242,6 +264,7 @@ function _getStats(payload: any) : IEndpointResponse
 {
   return { status: 200, result: {
     uuid: _uuid,
+    connectedClients: _connectedSocketCnt,
     uptime: util.getTimeComponents(Date.now() - _serverStart),
     memstats: process.memoryUsage()
   }};
