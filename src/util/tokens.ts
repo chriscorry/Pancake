@@ -343,14 +343,9 @@ export class Token
       this._jti = decodedJWT.jti;
 
       // Bring over payload fields
-      // NOTE: Don't use this.expired for this expiration check -- we might be
-      // here because of a call from there
-      if (this._expiration > Date.now()) {
-
-        Object.assign(this._userPayload, _.omit(decodedJWT, [
-          'iss', 'sub', 'iat', 'exp', 'jti'
-        ]));
-      }
+      Object.assign(this._userPayload, _.omit(decodedJWT, [
+        'iss', 'sub', 'iat', 'exp', 'jti'
+      ]));
 
       // We're thawed and baked
       this._opaque = false;
