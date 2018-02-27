@@ -33,7 +33,7 @@ log.level = 'trace';
 async function doIt()
 {
   // LATCHKEY
-  let latchkey = new LatchkeyClient('localhost', 3001);
+  let latchkey = new LatchkeyClient('localhost', 3500);
   let [err, token] = await grab(latchkey.createToken('admin@thecorrys.com', 'adminpassword'));
   if (err) {
     console.log(err);
