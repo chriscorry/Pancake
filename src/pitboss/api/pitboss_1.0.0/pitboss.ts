@@ -34,6 +34,7 @@ import { RandomStrategy }     from './strat_random';
  **                                                                        **
  ****************************************************************************/
 
+// ENTITLEMENTS
 const ENT_DOMAIN       = 'pitboss';
 const ENT_ROLE_ADMIN   = 'admin';
 const ENT_ROLE_CLIENT  = 'client';
@@ -779,8 +780,7 @@ function _registerInterest(payload: any) : IEndpointResponse
 
 function _createGroup(payload: any) : IEndpointResponse
 {
-  let name = payload.name;
-  let description = payload.description;
+  let { name, description } = payload;
 
   // Pass it along
   let err = _createGroupPriv(name, description);
@@ -828,11 +828,10 @@ function _deleteGroup(payload: any) : IEndpointResponse
 
 function _addServerToGroup(payload: any) : IEndpointResponse
 {
-  let groupName = payload.group;
-  let uuid      = payload.uuid;
+  let { group, uuid } = payload;
 
   // Pass it on
-  let err = _addServerToGroupPriv(groupName, uuid);
+  let err = _addServerToGroupPriv(group, uuid);
   if (err) {
     return { status: 400, err };
   }
@@ -842,11 +841,10 @@ function _addServerToGroup(payload: any) : IEndpointResponse
 
 function _removeServerFromGroup(payload: any) : IEndpointResponse
 {
-  let groupName = payload.group;
-  let uuid      = payload.uuid;
+  let { group, uuid } = payload;
 
   // Pass it on
-  let err = _removeServerFromGroupPriv(groupName, uuid);
+  let err = _removeServerFromGroupPriv(group, uuid);
   if (err) {
     return { status: 400, result: err };
   }
