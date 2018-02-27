@@ -19,6 +19,7 @@ import { entitledEndpoint,
  **                                                                        **
  ****************************************************************************/
 
+// ENTITLEMENTS
 const ENT_DOMAIN       = 'valet';
 const ENT_ROLE_ADMIN   = 'admin';
 const ENT_ROLE_CLIENT  = 'client';
