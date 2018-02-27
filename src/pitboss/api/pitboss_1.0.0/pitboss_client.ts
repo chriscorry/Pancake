@@ -186,22 +186,8 @@ export class PitbossClient extends ClientWebsocketAPI
       this._registered = false;
     }
 
-    // Save off only certain listeners...
-    let heartbeatListeners = this.listeners(MSG_HEARTBEAT);
-    let uuidListeners      = this.listeners(MSG_UUID);
-
     // Do the real deal
-    let returnValue = this._baseConnect(address, port, token, onConnect, onDisconnect);
-
-    // Add our listeners back
-    for (let listener of heartbeatListeners) {
-      this.on(MSG_HEARTBEAT, listener as ListenerCallback);
-    }
-    for (let listener of uuidListeners) {
-      this.on(MSG_UUID, listener as ListenerCallback);
-    }
-
-    return returnValue;
+    return this._baseConnect(address, port, token, onConnect, onDisconnect);
   }
 
 
