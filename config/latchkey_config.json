@@ -1,13 +1,7 @@
 {
   "global": {
     "PORT": 3500,
-    "[silent]JWT_SECRET": "v=pvme$1yg%3%%&v84*+-7788sf-xv@#2jjvj(n$0hdw*jj&%2",
-    "[silent]DEFAULT_TOKEN_LIFESPAN": 1440,
-    "[silent]LATCHKEY_ACCOUNT_EMAIL": "admin@thecorrys.com",
-    "[silent]LATCHKEY_ACCOUNT_PASSWORD": "adminpassword",
-    "LOG_LEVEL": "trace",
     "USE_PITBOSS" : true,
-    "PITBOSS_ADDRESS" : "localhost",
     "PITBOSS_PORT" : 4000,
     "PITBOSS_GROUPS": [
       "Authenticators"
@@ -16,6 +10,15 @@
   "test": {
   },
   "development": {
-    "DEFAULT_TOKEN_LIFESPAN": 15
+    "LOG_LEVEL": "trace",
+    "[silent]JWT_SECRET": "v=pvme$1yg%3%%&v84*+-7788sf-xv@#2jjvj(n$0hdw*jj&%2",
+    "PITBOSS_ADDRESS" : "localhost",
+    "DEFAULT_TOKEN_LIFESPAN": 15,
+    "[silent]LATCHKEY_ACCOUNT_EMAIL": "admin@thecorrys.com",
+    "[silent]LATCHKEY_ACCOUNT_PASSWORD": "adminpassword"
+  },
+  "production": {
+    "[silent]JWT_SECRET": "&pFcx3!^B8H/H#i7ys#W94VbQG?pJ+zR19,Ce!R.h5`vCH@.+D",
+    "[silent]DEFAULT_TOKEN_LIFESPAN": 1440
   }
 }

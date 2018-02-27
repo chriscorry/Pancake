@@ -1,18 +1,21 @@
 {
   "global": {
     "PORT": 3002,
-    "[silent]JWT_SECRET": "v=pvme$1yg%3%%&v84*+-7788sf-xv@#2jjvj(n$0hdw*jj&%2",
-    "LATCHKEY_ADDRESS": "localhost",
-    "LATCHKEY_PORT": 3001,
-    "[silent]LATCHKEY_ACCOUNT_EMAIL": "admin@thecorrys.com",
-    "[silent]LATCHKEY_ACCOUNT_PASSWORD": "adminpassword",
-    "LOG_LEVEL": "trace",
+    "LATCHKEY_PORT": 3500,
     "USE_PITBOSS" : true,
-    "PITBOSS_ADDRESS" : "localhost",
     "PITBOSS_PORT" : 4000
   },
   "test": {
   },
   "development": {
+    "LOG_LEVEL": "trace",
+    "[silent]JWT_SECRET": "v=pvme$1yg%3%%&v84*+-7788sf-xv@#2jjvj(n$0hdw*jj&%2",
+    "PITBOSS_ADDRESS" : "localhost",
+    "LATCHKEY_ADDRESS": "localhost",
+    "[silent]LATCHKEY_ACCOUNT_EMAIL": "admin@thecorrys.com",
+    "[silent]LATCHKEY_ACCOUNT_PASSWORD": "adminpassword"
+  },
+  "production": {
+    "[silent]JWT_SECRET": "&pFcx3!^B8H/H#i7ys#W94VbQG?pJ+zR19,Ce!R.h5`vCH@.+D"
   }
 }
