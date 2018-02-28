@@ -5,6 +5,7 @@
  ****************************************************************************/
 
 import axios                  from 'axios';
+import EventEmitter           from 'events';
 import { log }                from '../../../util/pancake-utils';
 import { PancakeError }       from '../../../util/pancake-err';
 import { Token }              from '../../../util/tokens';
@@ -19,6 +20,7 @@ import { ClientWebsocketAPI } from '../../../util/clientapi';
 
 // EVENTS
 const EVT_EXPIRED_TOKEN  = 'expiredToken';
+const EVT_UPDATE_TOKEN   = 'updateToken';
 
 const URL_HTTP           = 'http://';
 const URL_HTTPS          = 'https://';
@@ -37,7 +39,7 @@ const RECONNECT_INTERVAL = 15; // sec
  **                                                                        **
  ****************************************************************************/
 
-export class LatchkeyClient
+export class LatchkeyClient extends EventEmitter
 {
   private _token: Token;
   private _address: string;
@@ -118,7 +120,9 @@ export class LatchkeyClient
             }
 
             // Looks good!
+            let oldToken = client._token;
             client._token = new Token(resp.data.token);
+            client.emit(EVT_UPDATE_TOKEN, { oldToken, newToken: client._token });
             resolve(client._token);
           })
           .catch((err) => {
@@ -170,6 +174,7 @@ export class LatchkeyClient
 
   constructor(address: string, port: number)
   {
+    super();
     this._address = address;
     this._port = port;
     this._baseURL = URL_HTTP + address + ':' + port;
@@ -237,6 +242,7 @@ export class LatchkeyClient
 
           // Looks good!
           this._token = new Token(resp.data.token);
+          this.emit(EVT_UPDATE_TOKEN, { oldToken: useToken, newToken: this._token });
           resolve(this._token);
         })
         .catch((err) => {

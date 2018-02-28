@@ -39,6 +39,7 @@ export interface IAPI
 
   onConnect?(socket: any) : PancakeError;
   onDisconnect?(socket: any) : PancakeError;
+  onAuthToken?(newToken: Token) : PancakeError;
 
   flagpoleHandlers: IEndpointInfo[];
 }

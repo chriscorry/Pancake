@@ -14,6 +14,7 @@ import { Configuration }   from '../util/pancake-config';
 import { IEndpointInfo,
          IEndpointResponse,
          EndpointHandler } from './apitypes';
+import { Token }           from '../util/tokens';
 import utils             = require('../util/pancake-utils');
 const  log               = utils.log;
 
@@ -30,10 +31,10 @@ import { TransportSocketIO }   from './websockets';
  ****************************************************************************/
 
 export interface IFlagpoleOpts {
-  envName?:       string,
-  apiSearchDirs?: string,
-  serverEvents?:  EventEmitter,
-  initEvents?:    EventEmitter
+  envName?:             string,
+  apiSearchDirs?:       string,
+  serverEventsSource?:  EventEmitter,
+  initEventsSink?:      EventEmitter
 }
 
 interface _IApiInfo {
@@ -61,6 +62,7 @@ export class Flagpole extends EventEmitter
   private _apiSearchDirs: string[] = [];
   private _registeredAPIsByToken   = new Map<string, _IApiInfo>();
   private _opts: IFlagpoleOpts;
+  private _authToken: Token;
 
   // Transports
   private _transports: ITransport[] = [];
@@ -278,7 +280,7 @@ export class Flagpole extends EventEmitter
   {
     // Remember our opts
     this._opts = opts ? opts : {};
-    this._opts.initEvents = this;
+    this._opts.initEventsSink = this;
 
     // Initialize our REST transport
     let transportREST = new TransportREST();
@@ -305,6 +307,17 @@ export class Flagpole extends EventEmitter
     else {
       this._apiSearchDirs = [ '.' + path.sep ];
     }
+  }
+
+
+  set authToken(token: Token)
+  {
+    this._authToken = token;
+    this._registeredAPIsByToken.forEach((api: _IApiInfo) => {
+      if (api.apiHandler.onAuthToken) {
+        api.apiHandler.onAuthToken(token);
+      }
+    });
   }
 
 

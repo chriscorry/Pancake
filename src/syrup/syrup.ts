@@ -172,7 +172,7 @@ export async function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
   flagpole.initialize(serverRestify, serverSocketIO, {
     apiSearchDirs,
     envName: config.envName,
-    serverEvents: pitboss
+    serverEventsSource: pitboss
    });
 
 
@@ -204,6 +204,9 @@ export async function go(serverConfigFileName: string = DEFAULT_SERVER_CONFIG,
      // hooked up to the database before requesting the token
      let latchkey = new LatchkeyClient(addressLatchkey, portLatchkey);
      latchkey.linkClientAPI(pitboss);
+     latchkey.on('updateToken', (oldToken: Token, newToken: Token) => {
+        flagpole.authToken = newToken;
+     });
      if (selfAuth) {
        flagpole.on('initComplete', async (apiName: string, apiErr: any) => {
          if ('latchkey' === apiName && !apiErr) {
