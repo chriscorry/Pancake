@@ -9,6 +9,8 @@ const  uuidv4              = require('uuid/v4');
 import * as utils            from '../util/pancake-utils';
 import { PancakeError }      from '../util/pancake-err';
 import { Configuration }     from '../util/pancake-config';
+import { Token }             from '../util/tokens';
+import { entitled }          from '../util/entitlements';
 const  log                 = utils.log;
 
 
@@ -30,8 +32,8 @@ export interface IChannel {
   name: string,
   uuid: string,
   domain: IDomain,
-  version: string,
   description?: string,
+  entitledRoles?: string[],
   opts?: any,
   subscribers: Set<any> // set of sockets
 }
@@ -39,7 +41,6 @@ export interface IChannel {
 export interface IMessage {
   uuid: string,
   payload: any,
-  version: string,
   channel: IChannel,
   sent: number
 }
@@ -58,7 +59,7 @@ export class MessageEngine
   private _channels = new Map<string, IChannel>();
   private _lastDomain: IDomain;
   private _lastChannel: IChannel;
-  private _lastVersion: string = '1.0.0';
+  private _lastToken: Token;
 
 
   /****************************************************************************
@@ -176,7 +177,8 @@ export class MessageEngine
   }
 
 
-  createChannel(domainName: string, channelName: string, version: string, description?: string, opts?: any) : IChannel
+  createChannel(domainName: string, channelName: string,
+                roles?: any, description?: string, opts?: any) : IChannel
   {
     // Quick and dirty validation
     let domain = this._getDomain(domainName);
@@ -195,13 +197,18 @@ export class MessageEngine
       return existingChannel;
     }
 
+    // Prep roles
+    if (roles) {
+      if (!Array.isArray(roles)) roles = [ roles ];
+    }
+
     // Clean up and register
     channelName = channelName.toLowerCase();
     let newChannel: IChannel = {
       name: channelName,
       uuid: uuidv4(),
       domain,
-      version,
+      entitledRoles: roles,
       description,
       opts,
       subscribers: new Set<any>()
@@ -216,7 +223,7 @@ export class MessageEngine
   }
 
 
-  deleteChannel(domainNameOrObj: any, channelName: string, version?: string) : boolean
+  deleteChannel(domainNameOrObj: any, channelName: string) : boolean
   {
     // Extract our domain
     let domain: IDomain;
@@ -256,13 +263,13 @@ export class MessageEngine
   */
 
 
-  emit(domainName: string, channelName: string, version: string, payload: any, logErrors: boolean = true) : IMessage
+  emit(domainName: string, channelName: string, payload: any, token?: Token, logErrors: boolean = true) : IMessage
   {
-      return this.send(domainName, channelName, version, payload, logErrors);
+      return this.send(domainName, channelName, payload, token, logErrors);
   }
 
 
-  send(domainName: string, channelName: string, version: string, payload: any, logErrors: boolean = true) : IMessage
+  send(domainName: string, channelName: string, payload: any, token?: Token, logErrors: boolean = true) : IMessage
   {
     // Retrieve the channel
     let channel = this._getChannel(domainName, channelName);
@@ -271,16 +278,21 @@ export class MessageEngine
       return;
     }
 
+    // Authorized to use?
+    if (!entitled(token, channel.domain.name, channel.entitledRoles)) {
+      this._processError('ERR_UNAUTHORIZED', `Not authorized to send on this channel`, undefined, logErrors);
+      return;
+    }
+
     // Create the message
     let message: IMessage = {
       uuid: uuidv4(),
       payload,
-      version,
       channel,
       sent: Date.now()
     }
     let subscriberMessage = _.pick(message, [
-      'uuid', 'payload', 'version', 'sent'
+      'uuid', 'payload', 'sent'
     ]);
     subscriberMessage.domain = channel.domain.name;
     subscriberMessage.channel = channel.name;
@@ -295,30 +307,29 @@ export class MessageEngine
     // Remember these params
     this._lastDomain = channel.domain;
     this._lastChannel = channel;
-    this._lastVersion = version;
+    this._lastToken = token;
 
     return message;
   }
 
 
-  sendToLast(payload: any) : IMessage
+  sendToLast(payload: any, token?: Token) : IMessage
   {
     if (!this._lastDomain || !this._lastChannel) {
       this._processError('ERR_LAST_PARAMS', `Invalid params from last call to 'send'.`);
       return;
     }
-    return this.send(this._lastDomain.name, this._lastChannel.name, this._lastVersion, payload);
+    return this.send(this._lastDomain.name, this._lastChannel.name, payload, token || this._lastToken);
   }
 
 
-  on(domainName: string, channelName: string, version: string, socket: any) : IChannel
+  on(domainName: string, channelName: string, socket: any, token?: Token) : IChannel
   {
-    return this.subscribe(domainName, channelName, version, socket);
-
+    return this.subscribe(domainName, channelName, socket, token);
   }
 
 
-  subscribe(domainName: string, channelName: string, version: string, socket: any) : IChannel
+  subscribe(domainName: string, channelName: string, socket: any, token?: Token) : IChannel
   {
     // Quick and dirty validation
     let domain = this._getDomain(domainName);
@@ -337,6 +348,15 @@ export class MessageEngine
         this._processError('ERR_BAD_CHANNEL', `Could not create channel '${channelName}'.`);
         return;
       }
+      log.warn(`MESSAGING: Lazy-created public channel '${channelName}' with no authorization requirements.`);
+    }
+
+    // Authorized to use?
+    else {
+      if (!entitled(token, channel.domain.name, channel.entitledRoles)) {
+        this._processError('ERR_UNAUTHORIZED', `Not authorized to subscribe to this channel`);
+        return;
+      }
     }
 
     // Add this subscriber to the subscriber list
@@ -346,7 +366,7 @@ export class MessageEngine
   }
 
 
-  unsubscribe(domainName: string, channelName: string, version: string, socket: any) : IChannel
+  unsubscribe(domainName: string, channelName: string, socket: any) : IChannel
   {
     // Retrieve the channel
     let channel = this._getChannel(domainName, channelName);
@@ -386,10 +406,19 @@ export class MessageEngine
 
     this._domains.forEach((domain: IDomain, domainName: string) => {
       if (domainName != domain.uuid) {
-        let newDomain = { domain: domain.name, uuid: domain.uuid, description: domain.description, channels: new Array<any>() };
+        let newDomain = {
+          domain: domain.name,
+          uuid: domain.uuid,
+          description: domain.description,
+          channels: new Array<any>()
+        };
         domain.channels.forEach((channel: IChannel, channelName: string) => {
           if (channelName != channel.uuid) {
-            newDomain.channels.push({ channel: channel.name, uuid: channel.uuid, description: channel.description });
+            newDomain.channels.push({
+              channel: channel.name,
+              uuid: channel.uuid,
+              description: channel.description
+            });
           }
         });
         returnItems.push(newDomain);

@@ -83,7 +83,8 @@ export class ScreechClient extends ClientWebsocketAPI
    ****************************************************************************/
 
   // NOTE: subscribe requests are not relayed
-  async _subscribe(domainName: string, channelName: string, onMessage?: ListenerCallback) : Promise<PancakeError>
+  async _subscribe(domainName: string, channelName: string,
+                   onMessage?: ListenerCallback) : Promise<PancakeError>
   {
     // Simple validation checks
     if (!this.connected) {
@@ -100,9 +101,14 @@ export class ScreechClient extends ClientWebsocketAPI
       }
     }
 
-    // Kick off the request
     return new Promise<PancakeError>((resolve, reject) => {
-      this._socket.emit('screech:subscribe', { domain: domainName, channel: channelName, relay: this._relayConnection }, this._timeoutCallback((resp: any) => {
+
+      // Kick off the request
+      this._socket.emit('screech:subscribe', {
+        domain: domainName,
+        channel: channelName,
+        relay: this._relayConnection
+      }, this._timeoutCallback((resp: any) => {
 
         if (!(resp instanceof PancakeError)) {
 
@@ -178,9 +184,15 @@ export class ScreechClient extends ClientWebsocketAPI
       return this._processError('ERR_NO_CONNECTION', `SCREECH: Not connected to server.`);
     }
 
-    // Kick off the request
     return new Promise<PancakeError>((resolve, reject) => {
-      this._socket.emit('screech:createDomain', { name: domainName, description, opts, relay: this._relayConnection }, this._timeoutCallback((resp: any) => {
+
+      // Kick off the request
+      this._socket.emit('screech:createDomain', {
+        name: domainName,
+        description,
+        opts,
+        relay: this._relayConnection
+      }, this._timeoutCallback((resp: any) => {
 
         if (!(resp instanceof PancakeError)) {
 
@@ -214,9 +226,13 @@ export class ScreechClient extends ClientWebsocketAPI
       return this._processError('ERR_NO_CONNECTION', `SCREECH: Not connected to server.`);
     }
 
-    // Kick off the request
     return new Promise<PancakeError>((resolve, reject) => {
-      this._socket.emit('screech:deleteDomain', { name: domainName, relay: this._relayConnection }, this._timeoutCallback((resp: any) => {
+
+      // Kick off the request
+      this._socket.emit('screech:deleteDomain', {
+        name: domainName,
+        relay: this._relayConnection
+      }, this._timeoutCallback((resp: any) => {
 
         if (!(resp instanceof PancakeError)) {
 
@@ -250,16 +266,25 @@ export class ScreechClient extends ClientWebsocketAPI
   }
 
 
-  async openChannel(domainName: string, channelName: string, description: string, opts?: any) : Promise<PancakeError>
+  async openChannel(domainName: string, channelName: string,
+                    entitledRoles?: string[], description?: string, opts?: any) : Promise<PancakeError>
   {
     // Simple validation checks
     if (!this.connected) {
       return this._processError('ERR_NO_CONNECTION', `SCREECH: Not connected to server.`);
     }
 
-    // Kick off the request
     return new Promise<PancakeError>((resolve, reject) => {
-      this._socket.emit('screech:openChannel', { domain: domainName, name: channelName, description, opts, relay: this._relayConnection }, this._timeoutCallback((resp: any) => {
+
+      // Kick off the request
+      this._socket.emit('screech:openChannel', {
+        domain: domainName,
+        name: channelName,
+        entitledRoles,
+        description,
+        opts,
+        relay: this._relayConnection
+      }, this._timeoutCallback((resp: any) => {
 
         if (!(resp instanceof PancakeError)) {
 
@@ -295,9 +320,14 @@ export class ScreechClient extends ClientWebsocketAPI
       return this._processError('ERR_NO_CONNECTION', `SCREECH: Not connected to server.`);
     }
 
-    // Kick off the request
     return new Promise<PancakeError>((resolve, reject) => {
-      this._socket.emit('screech:deleteChannel', { domain: domainName, name: channelName, relay: this._relayConnection }, this._timeoutCallback((resp: any) => {
+
+      // Kick off the request
+      this._socket.emit('screech:deleteChannel', {
+        domain: domainName,
+        name: channelName,
+        relay: this._relayConnection
+      }, this._timeoutCallback((resp: any) => {
 
         if (!(resp instanceof PancakeError)) {
 
@@ -337,16 +367,23 @@ export class ScreechClient extends ClientWebsocketAPI
   }
 
 
-  async send(domainName: string, channelName: string, payload: any) : Promise<PancakeError>
+  async send(domainName: string, channelName: string, payload: any, proxyToken?: Token) : Promise<PancakeError>
   {
     // Simple validation checks
     if (!this.connected) {
       return this._processError('ERR_NO_CONNECTION', `SCREECH: Not connected to server.`);
     }
 
-    // Kick off the request
     return new Promise<PancakeError>((resolve, reject) => {
-      this._socket.emit('screech:send', { domain: domainName, channel: channelName, payload, relay: this._relayConnection }, this._timeoutCallback((resp: any) => {
+
+      // Kick off the request
+      this._socket.emit('screech:send', {
+        domain: domainName,
+        channel: channelName,
+        payload,
+        proxyToken: proxyToken ? proxyToken.jwt : undefined,
+        relay: this._relayConnection
+      }, this._timeoutCallback((resp: any) => {
 
         if (!(resp instanceof PancakeError)) {
 

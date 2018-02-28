@@ -11,6 +11,8 @@ import * as utils            from '../../../util/pancake-utils';
 import { grab }              from '../../../util/pancake-grab';
 import { PancakeError }      from '../../../util/pancake-err';
 import { Configuration }     from '../../../util/pancake-config';
+import { Token }             from '../../../util/tokens';
+import { Entitlements }      from '../../../util/entitlements';
 import { entitledEndpoint,
          IEndpointInfo,
          IEndpointResponse } from '../../../flagpole/apitypes';
@@ -47,6 +49,7 @@ const RELAY_GROUP_NAME = 'DefaultRelays';
 let _pitboss: PitbossClient;
 let _uuid: string;
 let _relayServers = new Map<string, IRelayServer>();
+let _authToken: Token;
 
 
 /****************************************************************************
@@ -59,7 +62,7 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
                               config: Configuration,
                               opts: any) : PancakeError
 {
-  let eventSinks = opts.initEvents;
+  let eventSinks = opts.initEventsSink;
 
   // We want to hear about registration events
   if (opts.serverEvents) {
@@ -74,16 +77,17 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
 }
 
 
-// export function onConnect(socket: any) : PancakeError
-// {
-//   return;
-// }
+export function onAuthToken(newToken: Token) : PancakeError
+{
+  _authToken = newToken;
 
+  // Pass into all of our client APIs
+  _relayServers.forEach((relay: IRelayServer) => {
+    relay.client.token = newToken;
+  });
 
-// export function onDisconnect(socket: any) : PancakeError
-// {
-//   return;
-// }
+  return;
+}
 
 
 /****************************************************************************
@@ -207,11 +211,11 @@ function _deleteDomain(payload: any) : IEndpointResponse
 
 function _openChannel(payload: any) : IEndpointResponse
 {
-  let { domain: domainName, name: channelName, description, opts } = payload;
+  let { domain: domainName, name: channelName, entitledRoles, description, opts } = payload;
   let relay: boolean = payload.relay ? payload.relay : false;
 
   // Kick it off
-  let channel:IChannel = messaging.createChannel(domainName, channelName, undefined, description, opts);
+  let channel:IChannel = messaging.createChannel(domainName, channelName, entitledRoles, description, opts);
   if (!channel) {
     return { status: 400, result: messaging.lastError };
   }
@@ -219,7 +223,7 @@ function _openChannel(payload: any) : IEndpointResponse
   // Relay the request
   if (!relay) {
     _relayServers.forEach((relay: IRelayServer) => {
-      relay.client.openChannel(domainName, channelName, description, opts);
+      relay.client.openChannel(domainName, channelName, entitledRoles, description, opts);
     });
   }
 
@@ -244,14 +248,20 @@ function _deleteChannel(payload: any) : IEndpointResponse
 // }
 
 
-function _send(payload: any) : IEndpointResponse
+function _send(payload: any, token: Token) : IEndpointResponse
 {
-  let { domain: domainName, channel: channelName, payload: messagePayload } = payload;
+  let { domain: domainName, channel: channelName, payload: messagePayload, proxyToken } = payload;
   let relay: boolean = payload.relay ? payload.relay : false;
+  let useToken: Token = token;
+
+  // Proxy?
+  if (proxyToken) {
+    useToken = new Token(proxyToken);
+  }
 
   // Shoot it off
   if (relay) messagePayload.relay = true;
-  let message: IMessage = messaging.emit(domainName, channelName, undefined, messagePayload);
+  let message: IMessage = messaging.emit(domainName, channelName, messagePayload, useToken);
   if (!message) {
     return { status: 400, result: messaging.lastError };
   }
@@ -259,7 +269,7 @@ function _send(payload: any) : IEndpointResponse
   // Relay the request
   if (!relay) {
     _relayServers.forEach((relay: IRelayServer) => {
-      relay.client.send(domainName, channelName, messagePayload);
+      relay.client.send(domainName, channelName, messagePayload, useToken);
     });
   }
 
@@ -273,11 +283,11 @@ function _send(payload: any) : IEndpointResponse
 
 
 // NOTE: subscribe requests are not relayed
-function _subscribe(payload: any) : IEndpointResponse
+function _subscribe(payload: any, token: Token) : IEndpointResponse
 {
   let { domain: domainName, channel: channelName, socket } = payload;
 
-  let channel: IChannel = messaging.on(domainName, channelName, undefined, socket);
+  let channel: IChannel = messaging.on(domainName, channelName, socket, token);
   if (!channel) {
     return { status: 400, result: messaging.lastError };
   }
