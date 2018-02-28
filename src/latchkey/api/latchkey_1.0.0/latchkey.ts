@@ -36,7 +36,7 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
                               config: Configuration,
                               opts: any) : PancakeError
 {
-  let eventSinks                  = opts.initEvents;
+  let eventSinks                  = opts.initEventsSink;
   let maintenanceInterval: number = config ? config.get('MAINTENANCE_INTERVAL') : 60*5;
 
   // Initialize our database connection

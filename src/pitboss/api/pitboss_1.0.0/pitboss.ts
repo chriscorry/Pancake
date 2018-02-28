@@ -75,7 +75,7 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
                               config: Configuration,
                               opts: any) : PancakeError
 {
-  let eventSinks       = opts.initEvents;
+  let eventSinks       = opts.initEventsSink;
   _maintenanceInterval = (config ? config.get('HEARTBEAT_INTERVAL') : HEARTBEAT_INTERVAL)*1000;
   _heartbeatThreshold  = config ? config.get('HEARTBEAT_THRESHOLD') : HEARTBEAT_THRESHOLD;
 

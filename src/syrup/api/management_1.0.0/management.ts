@@ -79,7 +79,7 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
                               config: Configuration,
                               opts: any) : PancakeError
 {
-  let eventSinks = opts.initEvents;
+  let eventSinks = opts.initEventsSink;
 
   // Setup
   _nameThisAPI       = name;
