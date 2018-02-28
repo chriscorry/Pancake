@@ -87,8 +87,8 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
 
   // Initialize our messaging service
   messaging.createDomain(DOMAIN_NAME, 'Event notifications for important Pitboss events');
-  messaging.createChannel(DOMAIN_NAME, CHANNEL_ALL_SERVERS, undefined, 'Notifications about all server comings and goings');
-  messaging.createChannel(DOMAIN_NAME, CHANNEL_ALL_GROUPS, undefined, 'Notifications about all group-related activity');
+  messaging.createChannel(DOMAIN_NAME, CHANNEL_ALL_SERVERS, 'Notifications about all server comings and goings');
+  messaging.createChannel(DOMAIN_NAME, CHANNEL_ALL_GROUPS, 'Notifications about all group-related activity');
 
   // TODO load up strategies map from config data
 
@@ -168,7 +168,7 @@ function _removeServerRegistration(serverOrAddress: any, port?: number, silent: 
     let server = serverOrAddress as IServerInfo;
 
     // Let interested parties know
-    messaging.send(DOMAIN_NAME, CHANNEL_ALL_SERVERS, undefined, {
+    messaging.send(DOMAIN_NAME, CHANNEL_ALL_SERVERS, {
       event: 'Disconnect',
       server: _.pick(server, [
         'name',
@@ -178,7 +178,7 @@ function _removeServerRegistration(serverOrAddress: any, port?: number, silent: 
         'address',
         'port',
         'missedHeartbeats'
-      ])}, false);
+      ])}, undefined, false);
 
     // Remove from groups
     while (server.groups.size) {
@@ -230,7 +230,7 @@ function _clearStalePendingServers() : void
 function _addServerToRegistry(server: IServerInfo) : void
 {
   // Let interested parties know
-  messaging.send(DOMAIN_NAME, CHANNEL_ALL_SERVERS, undefined, {
+  messaging.send(DOMAIN_NAME, CHANNEL_ALL_SERVERS, {
     event: 'Connect',
     server: _.pick(server, [
       'name',
@@ -240,7 +240,7 @@ function _addServerToRegistry(server: IServerInfo) : void
       'address',
       'port',
       'missedHeartbeats'
-    ])}, false);
+    ])}, undefined, false);
 
   // Make everything right
   _serversByUUID.set(server.uuid, server);
@@ -380,8 +380,8 @@ function _createGroupPriv(name: string, description?: string) : PancakeError
     name,
     description
   };
-  messaging.send(DOMAIN_NAME, name.toLowerCase(), undefined, newGroupMsg, false);
-  messaging.send(DOMAIN_NAME, CHANNEL_ALL_GROUPS, undefined, newGroupMsg, false);
+  messaging.send(DOMAIN_NAME, name.toLowerCase(), newGroupMsg, undefined, false);
+  messaging.send(DOMAIN_NAME, CHANNEL_ALL_GROUPS, newGroupMsg, undefined, false);
 
   return;
 }
@@ -428,8 +428,8 @@ function _addServerToGroupPriv(groupName: string, uuid: string) : PancakeError
       'port',
       'missedHeartbeats'
     ])};
-  messaging.send(DOMAIN_NAME, group.name, undefined, joinMsg, false);
-  messaging.send(DOMAIN_NAME, CHANNEL_ALL_GROUPS, undefined, joinMsg, false);
+  messaging.send(DOMAIN_NAME, group.name,         joinMsg, undefined, false);
+  messaging.send(DOMAIN_NAME, CHANNEL_ALL_GROUPS, joinMsg, undefined, false);
 
   return;
 }
@@ -476,8 +476,8 @@ function _removeServerFromGroupPriv(groupName: string, uuid: string) : PancakeEr
       'port',
       'missedHeartbeats'
     ])};
-  messaging.send(DOMAIN_NAME, group.name, undefined, leftMsg, false);
-  messaging.send(DOMAIN_NAME, CHANNEL_ALL_GROUPS, undefined, leftMsg, false);
+  messaging.send(DOMAIN_NAME, group.name,         leftMsg, undefined, false);
+  messaging.send(DOMAIN_NAME, CHANNEL_ALL_GROUPS, leftMsg, undefined, false);
 
   return;
 }
@@ -752,19 +752,19 @@ function _registerInterest(payload: any) : IEndpointResponse
 
     // Register for events about all servers coming and going
     case ARG_ALL_SERVERS:
-      messaging.subscribe(DOMAIN_NAME, CHANNEL_ALL_SERVERS, undefined, payload.socket);
+      messaging.subscribe(DOMAIN_NAME, CHANNEL_ALL_SERVERS, payload.socket);
       log.trace(`PITBOSS: Event subscription added for ALL SERVERS.`);
       break;
 
     // Register for events about all group activity
     case ARG_ALL_GROUPS:
-      messaging.subscribe(DOMAIN_NAME, CHANNEL_ALL_GROUPS, undefined, payload.socket);
+      messaging.subscribe(DOMAIN_NAME, CHANNEL_ALL_GROUPS, payload.socket);
       log.trace(`PITBOSS: Event subscription added for ALL GROUPS.`);
       break;
 
     // Otherwise, we assume this is a group name
     default:
-      messaging.subscribe(DOMAIN_NAME, target, undefined, payload.socket);
+      messaging.subscribe(DOMAIN_NAME, target, payload.socket);
       log.trace(`PITBOSS: Event subscription added for group '${target}'.`);
   }
 
@@ -818,8 +818,8 @@ function _deleteGroup(payload: any) : IEndpointResponse
     event: 'DeleteGroup',
     name
   };
-  messaging.send(DOMAIN_NAME, name, undefined, deleteGroupMsg, false);
-  messaging.send(DOMAIN_NAME, CHANNEL_ALL_GROUPS, undefined, deleteGroupMsg, false);
+  messaging.send(DOMAIN_NAME, name,               deleteGroupMsg, undefined, false);
+  messaging.send(DOMAIN_NAME, CHANNEL_ALL_GROUPS, deleteGroupMsg, undefined, false);
   messaging.deleteChannel(DOMAIN_NAME, name);
 
   return { status: 200, result: 'Group deleted.'};

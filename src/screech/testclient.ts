@@ -28,7 +28,7 @@ async function deleteDomain(name: string)
 
 async function openChannel(domain: string, name: string, description?: string)
 {
-  let [err, resp] = await grab(screech.openChannel(domain, name, description));
+  let [err, resp] = await grab(screech.openChannel(domain, name, undefined, description));
   if (err || resp)
     console.log(err, resp);
   else {

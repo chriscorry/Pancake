@@ -5,7 +5,7 @@
  ****************************************************************************/
 
 import axios                  from 'axios';
-import EventEmitter           from 'events';
+import { EventEmitter }       from 'events';
 import { log }                from '../../../util/pancake-utils';
 import { PancakeError }       from '../../../util/pancake-err';
 import { Token }              from '../../../util/tokens';
