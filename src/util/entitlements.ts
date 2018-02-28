@@ -29,6 +29,7 @@ export interface IEntitlement
 
 export function entitled(token: Token, domain: string, roles: any)
 {
+  if (!roles) return true;
   if (!Array.isArray(roles)) roles = [ roles ];
   let ent = new Entitlements(token, domain);
   for (let role of roles) {
@@ -68,11 +69,9 @@ export class Entitlements
       }
       else if (entitlementsOrToken instanceof Token) {
         let token = entitlementsOrToken as Token;
-        if (token.valid) {
-          this._expired = token.expired;
-          if (!token.expired) {
-            this._entitlements = token.get('ent');
-          }
+        this._expired = token.expired;
+        if (!token.expired) {
+          this._entitlements = token.get('ent');
         }
       }
     }
