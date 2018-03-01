@@ -42,6 +42,7 @@ async function doIt()
 
   // PITBOSS
   let pitboss = new PitbossClient();
+  latchkey.linkClientAPI(pitboss);
   await pitboss.connect('localhost', 4000, token, () => {
     console.log('Connected...');
 
