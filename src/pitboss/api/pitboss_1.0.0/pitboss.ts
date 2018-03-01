@@ -8,6 +8,7 @@ const  _                   = require('lodash');
 const  uuidv4              = require('uuid/v4');
 const  semver              = require('semver');
 import * as utils            from '../../../util/pancake-utils';
+import { Token }             from '../../../util/tokens';
 import { PancakeError }      from '../../../util/pancake-err';
 import { Configuration }     from '../../../util/pancake-config';
 import { IDomain,
@@ -744,7 +745,7 @@ function _getServerInfo(payload: any) : IEndpointResponse
  **                                                                        **
  ****************************************************************************/
 
-function _registerInterest(payload: any) : IEndpointResponse
+function _registerInterest(payload: any, token: Token) : IEndpointResponse
 {
   let target = payload.target ? payload.target.toLowerCase() : ARG_ALL_SERVERS;
 
@@ -752,20 +753,20 @@ function _registerInterest(payload: any) : IEndpointResponse
 
     // Register for events about all servers coming and going
     case ARG_ALL_SERVERS:
-      messaging.subscribe(DOMAIN_NAME, CHANNEL_ALL_SERVERS, payload.socket);
-      log.trace(`PITBOSS: Event subscription added for ALL SERVERS.`);
+      if (messaging.subscribe(DOMAIN_NAME, CHANNEL_ALL_SERVERS, payload.socket, token))
+        log.trace(`PITBOSS: Event subscription added for ALL SERVERS.`);
       break;
 
     // Register for events about all group activity
     case ARG_ALL_GROUPS:
-      messaging.subscribe(DOMAIN_NAME, CHANNEL_ALL_GROUPS, payload.socket);
-      log.trace(`PITBOSS: Event subscription added for ALL GROUPS.`);
+      if (messaging.subscribe(DOMAIN_NAME, CHANNEL_ALL_GROUPS, payload.socket, token))
+        log.trace(`PITBOSS: Event subscription added for ALL GROUPS.`);
       break;
 
     // Otherwise, we assume this is a group name
     default:
-      messaging.subscribe(DOMAIN_NAME, target, payload.socket);
-      log.trace(`PITBOSS: Event subscription added for group '${target}'.`);
+      if (messaging.subscribe(DOMAIN_NAME, target, payload.socket, token))
+        log.trace(`PITBOSS: Event subscription added for group '${target}'.`);
   }
 
   return { status: 200, result: 'Event subscription added.'};
