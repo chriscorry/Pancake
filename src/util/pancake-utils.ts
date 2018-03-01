@@ -189,9 +189,21 @@ class Logger
     return level >= this._logLevel;
   }
 
+  private get now() : string
+  {
+    function padTo2(num: number) : string
+    {
+      return num < 10 ? '0' + num.toString() : num.toString();
+    }
+    let now = new Date();
+    padTo2((now.getUTCFullYear()-2000));
+    return `${padTo2(now.getUTCFullYear()-2000)}/${padTo2(now.getUTCMonth())}/${padTo2(now.getUTCDate())} ${padTo2(now.getUTCHours())}:${padTo2(now.getUTCMinutes())}:${padTo2(now.getUTCSeconds())} `;
+  }
+
   _log(target: any, prefix: string, args: any) : void
   {
-    var logStr = prefix;
+    let now = new Date();
+    var logStr = this.now + prefix;
     if (args.length > 0) {
 
       // Error object
