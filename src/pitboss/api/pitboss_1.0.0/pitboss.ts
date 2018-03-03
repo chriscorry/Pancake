@@ -88,8 +88,8 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
 
   // Initialize our messaging service
   messaging.createDomain(DOMAIN_NAME, 'Event notifications for important Pitboss events');
-  messaging.createChannel(DOMAIN_NAME, CHANNEL_ALL_SERVERS, 'Notifications about all server comings and goings');
-  messaging.createChannel(DOMAIN_NAME, CHANNEL_ALL_GROUPS, 'Notifications about all group-related activity');
+  messaging.createChannel(DOMAIN_NAME, CHANNEL_ALL_SERVERS, undefined, 'Notifications about all server comings and goings');
+  messaging.createChannel(DOMAIN_NAME, CHANNEL_ALL_GROUPS, undefined, 'Notifications about all group-related activity');
 
   // TODO load up strategies map from config data
 
