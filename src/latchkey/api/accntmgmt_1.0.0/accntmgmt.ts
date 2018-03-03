@@ -78,7 +78,7 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
  **                                                                        **
  ****************************************************************************/
 
-async function _createAccount(payload: any, token: Token) : Promise<IEndpointResponse>
+async function _createAccount(payload: any) : Promise<IEndpointResponse>
 {
   let newToken: Token;
 
@@ -116,6 +116,6 @@ export let flagpoleHandlers: IEndpointInfo[] = [
     requestType: 'post',
     path: '/accntmgmt/account',
     event: 'createAccount',
-    handler: entitledEndpoint(ENT_DOMAIN, [ ENT_ROLE_CREATOR, ENT_ROLE_ADMIN ], API_TAG, _createAccount)
+    handler: _createAccount
   }
 ];
