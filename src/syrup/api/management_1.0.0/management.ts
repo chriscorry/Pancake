@@ -4,6 +4,7 @@
  **                                                                        **
  ****************************************************************************/
 
+import * as os from 'os';
 import _ = require('lodash');
 import * as util             from '../../../util/pancake-utils';
 import { PancakeError }      from '../../../util/pancake-err';
@@ -266,6 +267,11 @@ function _getStats(payload: any) : IEndpointResponse
     uuid: _uuid,
     connectedClients: _connectedSocketCnt,
     uptime: util.getTimeComponents(Date.now() - _serverStart),
+    architecture: os.arch(),
+    platform: os.platform(),
+    release: os.release(),
+    load: os.loadavg(),
+    cpus: os.cpus(),
     memstats: process.memoryUsage()
   }};
 }
