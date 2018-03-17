@@ -748,27 +748,38 @@ function _getServerInfo(payload: any) : IEndpointResponse
 function _registerInterest(payload: any, token: Token) : IEndpointResponse
 {
   let target = payload.target ? payload.target.toLowerCase() : ARG_ALL_SERVERS;
+  let success = false;
 
   switch(target) {
 
     // Register for events about all servers coming and going
     case ARG_ALL_SERVERS:
-      if (messaging.subscribe(DOMAIN_NAME, CHANNEL_ALL_SERVERS, payload.socket, token))
+      if (messaging.subscribe(DOMAIN_NAME, CHANNEL_ALL_SERVERS, payload.socket, token)) {
+        success = true;
         log.trace(`PITBOSS: Event subscription added for ALL SERVERS.`);
+      }
       break;
 
     // Register for events about all group activity
     case ARG_ALL_GROUPS:
-      if (messaging.subscribe(DOMAIN_NAME, CHANNEL_ALL_GROUPS, payload.socket, token))
+      if (messaging.subscribe(DOMAIN_NAME, CHANNEL_ALL_GROUPS, payload.socket, token)) {
+        success = true;
         log.trace(`PITBOSS: Event subscription added for ALL GROUPS.`);
+      }
       break;
 
     // Otherwise, we assume this is a group name
     default:
-      if (messaging.subscribe(DOMAIN_NAME, target, payload.socket, token))
+      if (messaging.subscribe(DOMAIN_NAME, target, payload.socket, token)) {
+        success = true;
         log.trace(`PITBOSS: Event subscription added for group '${target}'.`);
+      }
+      break;
   }
 
+  if (false === success) {
+    return { status: 400, result: `Could not create event subscription for target ${target}.`};
+  }
   return { status: 200, result: 'Event subscription added.'};
 }
 
