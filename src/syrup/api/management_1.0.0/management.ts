@@ -89,8 +89,8 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
   _shutdownCountdown = 0;
 
   // We want to hear about registration events
-  if (opts && opts.serverEvents) {
-    opts.serverEvents.on('serverUUID', _onNewServerUUID);
+  if (opts && opts.serverEventsSource) {
+    opts.serverEventsSource.on('serverUUID', _onNewServerUUID);
   }
 
   // Let folks know
