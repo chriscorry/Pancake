@@ -1,0 +1,32 @@
+{
+"e08d3760-49b1-4f7a-850e-ba6d217a1a6b": {
+  "accountID": "e08d3760-49b1-4f7a-850e-ba6d217a1a6b",
+  "type": "suspension",
+  "timestamp": 1521350135158,
+  "expire": 1523942135158
+},
+"9d41b133-2d97-4d89-8aaf-0ae328b53eea": {
+  "accountID": "9d41b133-2d97-4d89-8aaf-0ae328b53eea",
+  "type": "deletion",
+  "timestamp": 1520745335158,
+  "expire": 1523942135158
+},
+"85ef09db-1057-4f84-81eb-284259c0fe86": {
+  "accountID": "85ef09db-1057-4f84-81eb-284259c0fe86",
+  "type": "mod entitlement",
+  "timestamp": 1521004535158,
+  "expire": 1523942135158
+},
+"65f60e68-cb60-4992-9afe-057524a95d05": {
+  "accountID": "65f60e68-cb60-4992-9afe-057524a95d05",
+  "type": "mod account",
+  "timestamp": 1521004535158,
+  "expire": 1523942135158
+},
+"22d9460b-af78-450b-9bcb-28eda4613363": {
+  "accountID": "22d9460b-af78-450b-9bcb-28eda4613363",
+  "type": "logout",
+  "timestamp": 1519967735158,
+  "expire": 1523942135158
+}
+}
