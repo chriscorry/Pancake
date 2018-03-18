@@ -59,6 +59,7 @@ export class ClientWebsocketAPI extends EventEmitter
   private _lastError: any;
   protected _baseURL: string;
   protected _socket: any;
+  protected _oldToken: Token;
   protected _token: Token;
 
   // Provided by subclasses
@@ -162,6 +163,13 @@ export class ClientWebsocketAPI extends EventEmitter
 
       function _innerConnect(client: ClientWebsocketAPI, logErrorsInner: boolean) : PancakeError
       {
+        // If we don't have a token, we can't proceed. BUT... we want to keep
+        // trying until a token is provided _clientside_
+        if (!client._token) {
+          client._initiateReconnects(_innerConnect, true);
+          return client._processError('ERR_CLIENT_CONNECT', `${client._serviceNameUCase}: Client has no security token.`, undefined, logErrorsInner);
+        }
+
         // Make our websocket connect
         socketClient = socketIOClient(client._baseURL + '/', { reconnection: false });
         if (!socketClient) {
@@ -271,6 +279,7 @@ export class ClientWebsocketAPI extends EventEmitter
   {
     // Set in the token, if provided
     if (token) {
+      this._oldToken = this._token;
       this._token = token;
     }
 
@@ -392,6 +401,7 @@ export class ClientWebsocketAPI extends EventEmitter
 
   set token(token: Token)
   {
+    this._oldToken = this._token;
     this._token = token;
     this._expiredToken = false;
     this._updateConnectionToken();
