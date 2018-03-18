@@ -122,7 +122,7 @@ export class LatchkeyClient extends EventEmitter
             // Looks good!
             let oldToken = client._token;
             client._token = new Token(resp.data.token);
-            client.emit(EVT_UPDATE_TOKEN, { oldToken, newToken: client._token });
+            client.emit(EVT_UPDATE_TOKEN, oldToken, client._token);
             resolve(client._token);
           })
           .catch((err) => {
@@ -242,7 +242,7 @@ export class LatchkeyClient extends EventEmitter
 
           // Looks good!
           this._token = new Token(resp.data.token);
-          this.emit(EVT_UPDATE_TOKEN, { oldToken: useToken, newToken: this._token });
+          this.emit(EVT_UPDATE_TOKEN, useToken, this._token);
           resolve(this._token);
         })
         .catch((err) => {
