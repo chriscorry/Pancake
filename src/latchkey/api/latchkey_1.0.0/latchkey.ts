@@ -72,8 +72,7 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
 
 async function _createToken(payload: any) : Promise<IEndpointResponse>
 {
-  let email = payload.email;
-  let password = payload.password;
+  let { email, password } = payload;
   let account: any;
   let token: Token;
 
