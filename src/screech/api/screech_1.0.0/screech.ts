@@ -6,9 +6,9 @@
 
 import _                   = require('lodash');
 import { PitbossClient }     from '../../../pitboss/api/pitboss_1.0.0/pitboss_client';
+import { Cadre }             from '../../../pitboss/api/pitboss_1.0.0/cadre';
 import { ScreechClient }     from './screech_client';
 import * as utils            from '../../../util/pancake-utils';
-import { grab }              from '../../../util/pancake-grab';
 import { PancakeError }      from '../../../util/pancake-err';
 import { Configuration }     from '../../../util/pancake-config';
 import { Token }             from '../../../util/tokens';
@@ -46,10 +46,110 @@ interface IRelayServer {
 
 const RELAY_GROUP_NAME = 'DefaultRelays';
 
-let _pitboss: PitbossClient;
-let _uuid: string;
-let _relayServers = new Map<string, IRelayServer>();
-let _authToken: Token;
+let _cadre: ScreechCadre;
+
+
+/****************************************************************************
+ **                                                                        **
+ ** Class ScreechCadre                                                     **
+ **                                                                        **
+ ****************************************************************************/
+
+export class ScreechCadre extends Cadre<IRelayServer>
+{
+  private _token: Token;
+
+  /****************************************************************************
+   **                                                                        **
+   ** To override                                                            **
+   **                                                                        **
+   ****************************************************************************/
+
+   protected createCohortRecord(serverInfo: any) : IRelayServer
+   {
+     let newRelay: IRelayServer = _.pick(serverInfo, [
+       'name', 'uuid', 'address', 'port'
+     ]);
+     newRelay.client = new ScreechClient(this._token, { tryReconnect: false });
+     newRelay.client.connect(newRelay.address, newRelay.port, undefined, undefined, undefined, true);
+     return newRelay;
+   }
+
+
+   protected removeCohortRecord(relay: IRelayServer) : void
+   {
+     relay.client.close();
+     relay.client = undefined;
+   }
+
+
+  /****************************************************************************
+   **                                                                        **
+   ** Constructor                                                            **
+   **                                                                        **
+   ****************************************************************************/
+
+  constructor(pitboss: PitbossClient)
+  {
+    super(pitboss, RELAY_GROUP_NAME, API_TAG);
+  }
+
+
+  /****************************************************************************
+   **                                                                        **
+   ** Public methods                                                         **
+   **                                                                        **
+   ****************************************************************************/
+
+  onAuthToken(newToken: Token) : void
+  {
+    // Remember this guy
+    this._token = newToken;
+
+    // Pass into all of our client APIs
+    this._cohort.forEach((relay: IRelayServer) => {
+      relay.client.token = newToken;
+    });
+  }
+
+
+  relayCreateDomain(name: string, description: string, opts: any) : void
+  {
+    this._cohort.forEach((relay: IRelayServer) => {
+      relay.client.createDomain(name, description, opts);
+    });
+  }
+
+
+  relayOpenChannel(domainName: string, channelName: string,
+                   entitledRoles: any, description: string, opts: any) : void
+  {
+    this._cohort.forEach((relay: IRelayServer) => {
+      relay.client.openChannel(domainName, channelName, entitledRoles, description, opts);
+    });
+  }
+
+
+  relaySend(domainName: string, channelName: string, messagePayload: any, useToken: Token) : void
+  {
+    this._cohort.forEach((relay: IRelayServer) => {
+      relay.client.send(domainName, channelName, messagePayload, useToken);
+    });
+  }
+
+
+  getRelays() : any[]
+  {
+    let returnItems: any[] = [];
+    this._cohort.forEach((relay: IRelayServer) => {
+      returnItems.push(_.pick(relay, [
+        'name', 'uuid', 'address', 'port'
+      ]));
+    });
+    return returnItems;
+  }
+
+} // END class ScreechCadre
 
 
 /****************************************************************************
@@ -65,9 +165,8 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
   let eventSinks = opts.initEventsSink;
 
   // We want to hear about registration events
-  if (opts.serverEvents) {
-    _pitboss = opts.serverEvents as PitbossClient;
-    _pitboss.on('serverUUID', (uuid) => { _onNewServerUUID(uuid); });
+  if (opts.serverEventsSource) {
+    _cadre = new ScreechCadre(opts.serverEventsSource as PitbossClient);
   }
 
   // Let folks know
@@ -79,82 +178,12 @@ export function initializeAPI(name: string, ver: string, apiToken:string,
 
 export function onAuthToken(newToken: Token) : PancakeError
 {
-  _authToken = newToken;
-
   // Pass into all of our client APIs
-  _relayServers.forEach((relay: IRelayServer) => {
-    relay.client.token = newToken;
-  });
+  if (_cadre) {
+    _cadre.onAuthToken(newToken);
+  }
 
   return;
-}
-
-
-/****************************************************************************
- **                                                                        **
- ** Private functions                                                      **
- **                                                                        **
- ****************************************************************************/
-
-function _onRelayGroupChange(msg: any) : void
-{
-  switch(msg.event) {
-    case 'JoinedGroup':
-      if (msg.server.uuid != _uuid) {
-        let newRelay: IRelayServer = _.pick(msg.server, [
-          'name', 'uuid', 'address', 'port'
-        ]);
-        newRelay.client = new ScreechClient(undefined, { tryReconnect: false });
-        newRelay.client.connect(newRelay.address, newRelay.port, undefined, undefined, undefined, true);
-        _relayServers.set(msg.server.uuid, newRelay);
-        log.trace(`SCREECH: Added server '${msg.server.uuid}' to relay list.`);
-      }
-      break;
-    case 'LeftGroup':
-      if (msg.server.uuid != _uuid) {
-        let relay = _relayServers.get(msg.server.uuid);
-        if (relay) {
-          relay.client.close();
-          relay.client = undefined;
-          _relayServers.delete(msg.server.uuid);
-        }
-      }
-      log.trace(`SCREECH: Removed server '${msg.server.uuid}' from relay list.`);
-      break;
-  }
-}
-
-
-async function _onNewServerUUID(uuid: string) : Promise<void>
-{
-  // Save off
-  _uuid = uuid;
-
-  // We want to receive notifications about the relay group
-  await grab(_pitboss.registerInterest(RELAY_GROUP_NAME, _onRelayGroupChange));
-
-  // Retrive our list of groups from the server
-  let [err, resp] = await grab(_pitboss.getGroups());
-  if (err) return;
-
-  // Process each server already in the groups
-  let relays = resp.find((group:any) => {
-    if (RELAY_GROUP_NAME === group.name)
-      return true;
-  })
-  if (relays && relays.members) {
-    relays.members.forEach((relay: any) => {
-      if (relay.uuid != _uuid) {
-        log.trace(`SCREECH: Added server '${relay.uuid}' to relay list.`);
-        let newRelay: IRelayServer = _.pick(relay, [
-          'name', 'uuid', 'address', 'port'
-        ]);
-        newRelay.client = new ScreechClient(undefined, { tryReconnect: false });
-        newRelay.client.connect(newRelay.address, newRelay.port, undefined, undefined, undefined, true);
-        _relayServers.set(relay.uuid, newRelay);
-      }
-    });
-  }
 }
 
 
@@ -176,10 +205,8 @@ function _createDomain(payload: any) : IEndpointResponse
   }
 
   // Relay the request
-  if (!relay) {
-    _relayServers.forEach((relay: IRelayServer) => {
-      relay.client.createDomain(name, description, opts);
-    });
+  if (!relay && _cadre) {
+    _cadre.relayCreateDomain(name, description, opts);
   }
 
   return { status: 200, result: { reason: 'Domain successfully created', uuid: domain.uuid } };
@@ -221,10 +248,8 @@ function _openChannel(payload: any) : IEndpointResponse
   }
 
   // Relay the request
-  if (!relay) {
-    _relayServers.forEach((relay: IRelayServer) => {
-      relay.client.openChannel(domainName, channelName, entitledRoles, description, opts);
-    });
+  if (!relay && _cadre) {
+    _cadre.relayOpenChannel(domainName, channelName, entitledRoles, description, opts);
   }
 
   return { status: 200, result: { reason: 'Channel successfully opened', uuid: channel.uuid } };
@@ -267,10 +292,8 @@ function _send(payload: any, token: Token) : IEndpointResponse
   }
 
   // Relay the request
-  if (!relay) {
-    _relayServers.forEach((relay: IRelayServer) => {
-      relay.client.send(domainName, channelName, messagePayload, useToken);
-    });
+  if (!relay && _cadre) {
+    _cadre.relaySend(domainName, channelName, messagePayload, useToken);
   }
 
   // All good
@@ -313,12 +336,7 @@ function _getRegistry(payload: any) : IEndpointResponse
 
 function _getRelays(payload: any) : IEndpointResponse
 {
-  let returnItems: any[] = [];
-  _relayServers.forEach((relay: IRelayServer) => {
-    returnItems.push(_.pick(relay, [
-      'name', 'uuid', 'address', 'port'
-    ]));
-  });
+  let returnItems = _cadre ? _cadre.getRelays() : undefined;
   return { status: 200, result: returnItems };
 }
 
