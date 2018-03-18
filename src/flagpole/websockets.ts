@@ -254,6 +254,11 @@ export class TransportSocketIO extends EventEmitter implements ITransport
     let apiRequests = payload.apiRequests;
     let token: Token;
 
+    // We always need a token
+    if (!payload.token) {
+      return [ { status: 'ERR_UNAUTHORIZED', result: { reason: `${API_TAG}: Invalid authorization token.`, expired: false } } ];
+    }
+
     // Safely try to convert string passed in payload to a Token
     try {
       token = new Token(payload.token);
